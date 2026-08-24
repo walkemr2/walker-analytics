@@ -4,15 +4,15 @@ Walker Analytics is a Python- and Streamlit-based market decision-support applic
 
 ## Current Capabilities
 
-- Multi-asset market analysis
-- EMA20 and 30/50/100/200-day moving averages
-- Interactive Asset Explorer
-- Early Rotation analytics
-- Confirmed Rotation analytics
-- Momentum scoring
-- Acceleration scoring
-- Rotation-state classification
-- Interactive Plotly visualizations
+* Multi-asset market analysis
+* EMA20 and 30/50/100/200-day moving averages
+* Interactive Asset Explorer
+* Early Rotation analytics
+* Confirmed Rotation analytics
+* Momentum scoring
+* Acceleration scoring
+* Rotation-state classification
+* Interactive Plotly visualizations
 
 ## Architecture
 
@@ -45,3 +45,6 @@ Walker Analytics
 ## Disclaimer
 
 This application is for analytical, educational, and portfolio-demonstration purposes only. It is not investment advice.
+
+Last deployment workflow test: 08-24-2026
+
