@@ -1,0 +1,33 @@
+# Python cache / environments
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Jupyter temporary files
+.ipynb_checkpoints/
+
+# OS / editor clutter
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Archives and temporary working material
+archive/
+archived_notebooks/
+
+# Logs / temp files
+*.log
+*.tmp
+*.bak
+
+# Keep the actual web outputs and application files
+# data_processed is intentionally NOT ignored
+# scripts is intentionally NOT ignored
+# dashboard_app is intentionally NOT ignored
+# notebooks is intentionally NOT ignored
+# Old/duplicate Streamlit deployment folder
+walker-analytics-web/

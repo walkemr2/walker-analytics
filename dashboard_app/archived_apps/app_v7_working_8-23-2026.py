@@ -18,12 +18,9 @@ st.set_page_config(
 # PATHS
 # ============================================================
 
-# app.py is located in:
-# <project folder>\dashboard_app\app.py
-
-APP_DIR = Path(__file__).resolve().parent
-
-BASE_DIR = APP_DIR.parent
+BASE_DIR = Path(
+    r"C:\Users\matth\OneDrive\Desktop\04 Investing Stuff\1.1 Stock Trading\3.0 Web Rotation Dashboard"
+)
 
 DATA_DIR = BASE_DIR / "data_processed"
 

@@ -1,0 +1,4 @@
+"C:\Users\matth\.conda\envs\notebook-env\python.exe" -m streamlit run "C:\Users\matth\OneDrive\Desktop\04 Investing Stuff\1.1 Stock Trading\3.0 Web Rotation Dashboard\dashboard_app\app.py"
+
+When you're ready to stop it, click that Command Prompt and press:
+Ctrl + C

@@ -18,18 +18,14 @@ st.set_page_config(
 # PATHS
 # ============================================================
 
-# app.py is located in:
-# <project folder>\dashboard_app\app.py
-
-APP_DIR = Path(__file__).resolve().parent
-
-BASE_DIR = APP_DIR.parent
+BASE_DIR = Path(
+    r"C:\Users\matth\OneDrive\Desktop\04 Investing Stuff\1.1 Stock Trading\3.0 Web Rotation Dashboard"
+)
 
 DATA_DIR = BASE_DIR / "data_processed"
 
 SNAPSHOT_FILE = DATA_DIR / "web_asset_snapshot.csv"
 ROTATION_FILE = DATA_DIR / "web_rotation_snapshot.csv"
-EARLY_FILE = DATA_DIR / "web_early_rotation_snapshot.csv"
 PRICE_FILE = DATA_DIR / "sector_prices.csv"
 MA_WIDE_FILE = DATA_DIR / "moving_average_wide.csv"
 REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
@@ -42,15 +38,14 @@ REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
 def load_data():
     snapshot = pd.read_csv(SNAPSHOT_FILE)
     rotation = pd.read_csv(ROTATION_FILE)
-    early = pd.read_csv(EARLY_FILE)
     prices = pd.read_csv(PRICE_FILE)
     ma_wide = pd.read_csv(MA_WIDE_FILE)
     refresh = pd.read_csv(REFRESH_FILE)
 
-    return snapshot, rotation, early, prices, ma_wide, refresh
+    return snapshot, rotation, prices, ma_wide, refresh
 
 
-snapshot, rotation, early, prices, ma_wide, refresh = load_data()
+snapshot, rotation, prices, ma_wide, refresh = load_data()
 
 # ============================================================
 # GLOBAL HEADER
@@ -70,7 +65,6 @@ page = st.sidebar.radio(
     [
         "Command Center",
         "Asset Explorer",
-        "Early Rotation",
         "Rotation Analysis",
         "Methodology"
     ]
@@ -95,9 +89,7 @@ def fmt_score(value):
 def fmt_pct(value):
     if pd.isna(value):
         return "N/A"
-    # sector_returns.csv stores percentage-point values:
-    # 6.98 means +6.98%, not +698%.
-    return f"{value:.2f}%"
+    return f"{value:.2%}"
 
 def get_top_state(df, state, n=5, sort_col="Rotation_Readiness_Score"):
     subset = df[df["Rotation_State"] == state].copy()
@@ -119,11 +111,6 @@ if page == "Command Center":
     emerging = rotation[rotation["Rotation_State"] == "EMERGING"].copy()
     weakening = rotation[rotation["Rotation_State"] == "WEAKENING"].copy()
 
-    early_entries = early[early["Early_Rotation_State"] == "EARLY ENTRY"].copy()
-    building = early[early["Early_Rotation_State"] == "BUILDING"].copy()
-    early_watch = early[early["Early_Rotation_State"] == "EARLY WATCH"].copy()
-    extended = early[early["Early_Rotation_State"] == "EXTENDED"].copy()
-
     top_leader = (
         leaders.sort_values("Rotation_Readiness_Score", ascending=False).iloc[0]["Ticker"]
         if not leaders.empty else "N/A"
@@ -134,33 +121,23 @@ if page == "Command Center":
         if not emerging.empty else "N/A"
     )
 
-    top_early = (
-        early_entries.sort_values("Early_Rotation_Score", ascending=False).iloc[0]["Ticker"]
-        if not early_entries.empty else "N/A"
-    )
-
-    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    col1, col2, col3, col4, col5 = st.columns(5)
 
     col1.metric("Assets Tracked", rotation["Ticker"].nunique())
-    col2.metric("Early Entry", len(early_entries))
-    col3.metric("Leaders", len(leaders))
-    col4.metric("Emerging", len(emerging))
-    col5.metric("Weakening", len(weakening))
-    col6.metric("Last Refresh", latest_refresh.get("Refresh_Time", "N/A"))
+    col2.metric("Leaders", len(leaders))
+    col3.metric("Emerging", len(emerging))
+    col4.metric("Weakening", len(weakening))
+    col5.metric("Last Refresh", latest_refresh.get("Refresh_Time", "N/A"))
 
     st.divider()
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns(2)
 
     with col1:
-        st.subheader("Top Early Entry")
-        st.metric("Highest Early Rotation Score", top_early)
+        st.subheader("Top Leader")
+        st.metric("Highest Rotation Readiness", top_leader)
 
     with col2:
-        st.subheader("Top Confirmed Leader")
-        st.metric("Highest Confirmed Readiness", top_leader)
-
-    with col3:
         st.subheader("Top Emerging Candidate")
         st.metric("Highest Emerging Readiness", top_emerging)
 
@@ -300,7 +277,7 @@ elif page == "Asset Explorer":
     c1.metric("Momentum Score", fmt_score(rotation_row.get("Momentum_Score")))
     c2.metric("Acceleration Score", fmt_score(rotation_row.get("Acceleration_Score")))
     c3.metric("Trend Score", fmt_score(rotation_row.get("Trend_Score")))
-    c4.metric("Confirmed Readiness", fmt_score(rotation_row.get("Rotation_Readiness_Score")))
+    c4.metric("Rotation Readiness", fmt_score(rotation_row.get("Rotation_Readiness_Score")))
 
     st.divider()
 
@@ -386,30 +363,7 @@ elif page == "Asset Explorer":
         "MA200": f"{selected_ticker}_200",
     }
 
-    st.sidebar.divider()
-    st.sidebar.subheader("Chart Moving Averages")
-    st.sidebar.caption("Price is always shown.")
-
-    show_ema20 = st.sidebar.checkbox("EMA20", value=True)
-    show_ma30 = st.sidebar.checkbox("MA30", value=True)
-    show_ma50 = st.sidebar.checkbox("MA50", value=False)
-    show_ma100 = st.sidebar.checkbox("MA100", value=False)
-    show_ma200 = st.sidebar.checkbox("MA200", value=False)
-
-    selected_ma_labels = []
-    if show_ema20:
-        selected_ma_labels.append("EMA20")
-    if show_ma30:
-        selected_ma_labels.append("MA30")
-    if show_ma50:
-        selected_ma_labels.append("MA50")
-    if show_ma100:
-        selected_ma_labels.append("MA100")
-    if show_ma200:
-        selected_ma_labels.append("MA200")
-
-    for label in selected_ma_labels:
-        col = ma_columns[label]
+    for label, col in ma_columns.items():
         if col in ma_wide.columns:
             fig_ma.add_trace(
                 go.Scatter(
@@ -463,124 +417,6 @@ elif page == "Asset Explorer":
     )
 
 # ============================================================
-# EARLY ROTATION
-# ============================================================
-
-elif page == "Early Rotation":
-
-    st.header("Early Rotation")
-
-    st.caption(
-        "Fast-signal layer focused on EMA20 / MA30 behavior, short-term momentum, "
-        "and acceleration before full confirmation is present."
-    )
-
-    early_entries = early[
-        early["Early_Rotation_State"] == "EARLY ENTRY"
-    ].sort_values("Early_Rotation_Score", ascending=False)
-
-    building = early[
-        early["Early_Rotation_State"] == "BUILDING"
-    ].sort_values("Early_Rotation_Score", ascending=False)
-
-    early_watch = early[
-        early["Early_Rotation_State"] == "EARLY WATCH"
-    ].sort_values("Early_Rotation_Score", ascending=False)
-
-    extended = early[
-        early["Early_Rotation_State"] == "EXTENDED"
-    ].sort_values("Early_Rotation_Score", ascending=False)
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Early Entry", len(early_entries))
-    c2.metric("Building", len(building))
-    c3.metric("Early Watch", len(early_watch))
-    c4.metric("Extended", len(extended))
-
-    st.divider()
-
-    display_cols = [
-        c for c in [
-            "Ticker",
-            "Early_Rotation_Score",
-            "Early_Rotation_Rank",
-            "Pct_Above_EMA20",
-            "Pct_Above_MA30",
-            "EMA20_Slope_5D_Pct",
-            "MA30_Slope_5D_Pct",
-            "Acceleration_Score",
-            "Momentum_Score",
-            "Early_Rotation_State",
-        ]
-        if c in early.columns
-    ]
-
-    st.subheader("Early Entry Candidates")
-    st.dataframe(
-        early_entries[display_cols],
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.subheader("Building / Early Watch")
-
-    building_watch = pd.concat(
-        [building, early_watch],
-        ignore_index=True
-    ).sort_values("Early_Rotation_Score", ascending=False)
-
-    st.dataframe(
-        building_watch[display_cols],
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.subheader("Extended")
-
-    st.caption(
-        "Strong or accelerating assets that may no longer be in an early-stage entry zone."
-    )
-
-    st.dataframe(
-        extended[display_cols],
-        use_container_width=True,
-        hide_index=True
-    )
-
-    st.divider()
-
-    st.subheader("Early Rotation Map")
-
-    plot_early = early.copy()
-    plot_early = plot_early.dropna(
-        subset=["Pct_Above_EMA20", "Acceleration_Score", "Early_Rotation_Score"]
-    )
-
-    plot_early["Plot_Size"] = (
-        pd.to_numeric(plot_early["Early_Rotation_Score"], errors="coerce")
-        .fillna(1)
-        .clip(lower=1)
-    )
-
-    fig_early = px.scatter(
-        plot_early,
-        x="Pct_Above_EMA20",
-        y="Acceleration_Score",
-        size="Plot_Size",
-        hover_name="Ticker",
-        hover_data=[
-            "Early_Rotation_Score",
-            "EMA20_Slope_5D_Pct",
-            "MA30_Slope_5D_Pct",
-            "Early_Rotation_State"
-        ],
-        title="EMA20 Expansion vs. Acceleration"
-    )
-
-    st.plotly_chart(fig_early, use_container_width=True)
-
-
-# ============================================================
 # ROTATION ANALYSIS
 # ============================================================
 
@@ -590,8 +426,7 @@ elif page == "Rotation Analysis":
 
     st.caption(
         "Cross-sectional momentum, acceleration, trend confirmation, "
-        "and confirmation-stage rotation analytics. Early-rotation signals "
-        "will be added as a separate layer rather than mixed into the confirmation model."
+        "and rotation-readiness analytics."
     )
 
     leaders = rotation[
@@ -665,27 +500,11 @@ elif page == "Rotation Analysis":
 
     st.subheader("Rotation Readiness Map")
 
-    rotation_map = rotation.copy()
-
-    # Plotly cannot use NaN values for marker size.
-    rotation_map["Plot_Size"] = (
-        pd.to_numeric(
-            rotation_map["Rotation_Readiness_Score"],
-            errors="coerce"
-        )
-        .fillna(0)
-        .clip(lower=1)
-    )
-
-    rotation_map = rotation_map.dropna(
-        subset=["Momentum_Score", "Acceleration_Score"]
-    )
-
     fig_rotation = px.scatter(
-        rotation_map,
+        rotation,
         x="Momentum_Score",
         y="Acceleration_Score",
-        size="Plot_Size",
+        size="Rotation_Readiness_Score",
         hover_name="Ticker",
         hover_data=[
             "Trend_Score",
@@ -741,15 +560,9 @@ elif page == "Methodology":
 
         Uses position relative to EMA20 and the 30/50/100/200-day moving averages to confirm structural trend.
 
-        **Confirmed Readiness**
+        **Rotation Readiness**
 
-        Combines Momentum, Acceleration, and Trend into a confirmation-stage decision-support score.
-        It is intentionally not treated as the earliest possible entry signal.
-
-        **Early Rotation Signal — planned next layer**
-
-        Uses the faster EMA20 / MA30 relationship, price expansion from EMA20, and improving momentum
-        to identify assets earlier in a possible rotation before full confirmation is present.
+        Combines Momentum, Acceleration, and Trend into a single cross-sectional decision-support score.
         """
     )
 
@@ -771,11 +584,7 @@ elif page == "Methodology":
 
         ↓
 
-        **Early Rotation Engine**
-
-        ↓
-
-        **Confirmed Rotation Analytics Engine**
+        **Rotation Analytics Engine**
 
         ↓
 
