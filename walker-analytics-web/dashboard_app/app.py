@@ -32,8 +32,8 @@ ROTATION_FILE = DATA_DIR / "web_rotation_snapshot.csv"
 EARLY_FILE = DATA_DIR / "web_early_rotation_snapshot.csv"
 PRICE_FILE = DATA_DIR / "sector_prices.csv"
 MA_WIDE_FILE = DATA_DIR / "moving_average_wide.csv"
+MA_RADAR_FILE = DATA_DIR / "web_ma_wide_snapshot.csv"
 REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
-
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -45,12 +45,13 @@ def load_data():
     early = pd.read_csv(EARLY_FILE)
     prices = pd.read_csv(PRICE_FILE)
     ma_wide = pd.read_csv(MA_WIDE_FILE)
+    ma_radar = pd.read_csv(MA_RADAR_FILE)
     refresh = pd.read_csv(REFRESH_FILE)
 
-    return snapshot, rotation, early, prices, ma_wide, refresh
+    return snapshot, rotation, early, prices, ma_wide, ma_radar, refresh
 
 
-snapshot, rotation, early, prices, ma_wide, refresh = load_data()
+snapshot, rotation, early, prices, ma_wide, ma_radar, refresh = load_data()
 
 # ============================================================
 # GLOBAL HEADER
@@ -69,6 +70,7 @@ page = st.sidebar.radio(
     "Navigation",
     [
         "Command Center",
+        "MA / EMA Radar",
         "Asset Explorer",
         "Early Rotation",
         "Rotation Analysis",
@@ -236,7 +238,273 @@ if page == "Command Center":
             use_container_width=True,
             hide_index=True
         )
+# ============================================================
+# MA / EMA RADAR
+# ============================================================
 
+elif page == "MA / EMA Radar":
+
+    st.header("MA / EMA Radar")
+
+    st.caption(
+        "Whole-universe moving-average radar for identifying recent EMA20 "
+        "crosses, assets near the EMA20, trend structure, and developing "
+        "rotation opportunities."
+    )
+
+    radar = ma_radar.copy()
+
+    # --------------------------------------------------------
+    # BASIC CLEANUP
+    # --------------------------------------------------------
+
+    numeric_cols = [
+        "Price",
+        "EMA20",
+        "Pct_Above_EMA20",
+        "MA30",
+        "Pct_Above_MA30",
+        "MA50",
+        "Pct_Above_MA50",
+        "MA100",
+        "Pct_Above_MA100",
+        "MA200",
+        "Pct_Above_MA200",
+        "Days_Since_Price_EMA20_Cross",
+        "EMA20_Slope_5D_Pct",
+        "MA30_Slope_5D_Pct",
+        "Early_Rotation_Score",
+        "Rotation_Readiness_Score",
+    ]
+
+    for col in numeric_cols:
+        if col in radar.columns:
+            radar[col] = pd.to_numeric(
+                radar[col],
+                errors="coerce"
+            )
+
+    # --------------------------------------------------------
+    # SUMMARY METRICS
+    # --------------------------------------------------------
+
+    above_ema20 = (
+        radar["Pct_Above_EMA20"] > 0
+    ).sum()
+
+    below_ema20 = (
+        radar["Pct_Above_EMA20"] < 0
+    ).sum()
+
+    near_ema20 = (
+        radar["Pct_Above_EMA20"].abs() <= 0.02
+    ).sum()
+
+    recent_cross = (
+        radar["Days_Since_Price_EMA20_Cross"] <= 5
+    ).sum()
+
+    c1, c2, c3, c4, c5 = st.columns(5)
+
+    c1.metric(
+        "Assets",
+        radar["Ticker"].nunique()
+    )
+
+    c2.metric(
+        "Above EMA20",
+        int(above_ema20)
+    )
+
+    c3.metric(
+        "Below EMA20",
+        int(below_ema20)
+    )
+
+    c4.metric(
+        "Near EMA20",
+        int(near_ema20)
+    )
+
+    c5.metric(
+        "Crossed EMA20 ≤ 5 Days",
+        int(recent_cross)
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # RADAR FILTER
+    # --------------------------------------------------------
+
+    st.subheader("Market Radar")
+
+    filter_choice = st.selectbox(
+        "Radar View",
+        [
+            "All Assets",
+            "Recent Cross Above EMA20",
+            "Recent Cross Below EMA20",
+            "Near EMA20",
+            "Above EMA20",
+            "Below EMA20",
+        ]
+    )
+
+    filtered = radar.copy()
+
+    if filter_choice == "Recent Cross Above EMA20":
+
+        filtered = filtered[
+            (filtered["Price_EMA20_Last_Cross"] == "CROSS ABOVE") &
+            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+        ]
+
+    elif filter_choice == "Recent Cross Below EMA20":
+
+        filtered = filtered[
+            (filtered["Price_EMA20_Last_Cross"] == "CROSS BELOW") &
+            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+        ]
+
+    elif filter_choice == "Near EMA20":
+
+        filtered = filtered[
+            filtered["Pct_Above_EMA20"].abs() <= 0.02
+        ]
+
+    elif filter_choice == "Above EMA20":
+
+        filtered = filtered[
+            filtered["Pct_Above_EMA20"] > 0
+        ]
+
+    elif filter_choice == "Below EMA20":
+
+        filtered = filtered[
+            filtered["Pct_Above_EMA20"] < 0
+        ]
+
+    # --------------------------------------------------------
+    # SORT CONTROLS
+    # --------------------------------------------------------
+
+    sort_options = {
+        "Ticker": "Ticker",
+        "Distance From EMA20": "Pct_Above_EMA20",
+        "Days Since EMA20 Cross": "Days_Since_Price_EMA20_Cross",
+        "Early Rotation Score": "Early_Rotation_Score",
+        "Confirmed Readiness": "Rotation_Readiness_Score",
+    }
+
+    c1, c2 = st.columns([3, 1])
+
+    with c1:
+        sort_label = st.selectbox(
+            "Sort By",
+            list(sort_options.keys())
+        )
+
+    with c2:
+        ascending = st.checkbox(
+            "Ascending",
+            value=True
+        )
+
+    sort_col = sort_options[sort_label]
+
+    if sort_col in filtered.columns:
+        filtered = filtered.sort_values(
+            sort_col,
+            ascending=ascending,
+            na_position="last"
+        )
+
+    # --------------------------------------------------------
+    # DISPLAY TABLE
+    # --------------------------------------------------------
+
+    radar_cols = [
+        c for c in [
+            "Ticker",
+            "Price",
+            "EMA20",
+            "Pct_Above_EMA20",
+            "Price_EMA20_Last_Cross",
+            "Days_Since_Price_EMA20_Cross",
+            "EMA20_Zone",
+            "MA30",
+            "Pct_Above_MA30",
+            "MA50",
+            "Pct_Above_MA50",
+            "MA100",
+            "Pct_Above_MA100",
+            "MA200",
+            "Pct_Above_MA200",
+            "EMA20_Slope_5D_Pct",
+            "MA30_Slope_5D_Pct",
+            "Early_Rotation_State",
+            "Early_Rotation_Score",
+            "Rotation_State",
+            "Rotation_Readiness_Score",
+        ]
+        if c in filtered.columns
+    ]
+
+    st.caption(
+        f"Showing {len(filtered)} of {len(radar)} assets."
+    )
+
+    st.dataframe(
+        filtered[radar_cols],
+        use_container_width=True,
+        hide_index=True,
+        height=650
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # RECENT EMA20 CROSS MONITOR
+    # --------------------------------------------------------
+
+    st.subheader("Recent EMA20 Cross Monitor")
+
+    recent = radar[
+        radar["Days_Since_Price_EMA20_Cross"] <= 10
+    ].copy()
+
+    recent = recent.sort_values(
+        [
+            "Days_Since_Price_EMA20_Cross",
+            "Pct_Above_EMA20"
+        ],
+        ascending=[True, False]
+    )
+
+    recent_cols = [
+        c for c in [
+            "Ticker",
+            "Price",
+            "EMA20",
+            "Pct_Above_EMA20",
+            "Price_EMA20_Last_Cross",
+            "Price_EMA20_Last_Cross_Date",
+            "Days_Since_Price_EMA20_Cross",
+            "EMA20_Zone",
+            "EMA20_Slope_5D_Pct",
+            "Early_Rotation_State",
+            "Early_Rotation_Score",
+            "Rotation_State",
+        ]
+        if c in recent.columns
+    ]
+
+    st.dataframe(
+        recent[recent_cols],
+        use_container_width=True,
+        hide_index=True
+    )
 # ============================================================
 # ASSET EXPLORER
 # ============================================================
