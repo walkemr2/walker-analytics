@@ -38,7 +38,7 @@ REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
 # LOAD DATA
 # ============================================================
 
-@st.cache_data
+@st.cache_data(ttl=300)
 def load_data():
     snapshot = pd.read_csv(SNAPSHOT_FILE)
     rotation = pd.read_csv(ROTATION_FILE)
