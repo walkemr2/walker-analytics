@@ -299,7 +299,7 @@ numeric_cols = [
         "Rotation_Readiness_Score",
 ]
 
-    for col in numeric_cols:
+for col in numeric_cols:
         if col in radar.columns:
             radar[col] = pd.to_numeric(
                 radar[col],
