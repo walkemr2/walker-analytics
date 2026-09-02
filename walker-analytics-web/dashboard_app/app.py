@@ -280,7 +280,7 @@ radar["EMA_Signal"] = radar.apply(ema_signal, axis=1)
     # BASIC CLEANUP
     # --------------------------------------------------------
 
-    numeric_cols = [
+numeric_cols = [
         "Price",
         "EMA20",
         "Pct_Above_EMA20",
@@ -297,7 +297,7 @@ radar["EMA_Signal"] = radar.apply(ema_signal, axis=1)
         "MA30_Slope_5D_Pct",
         "Early_Rotation_Score",
         "Rotation_Readiness_Score",
-    ]
+]
 
     for col in numeric_cols:
         if col in radar.columns:
