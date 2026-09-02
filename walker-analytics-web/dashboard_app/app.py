@@ -253,7 +253,29 @@ elif page == "MA / EMA Radar":
     )
 
     radar = ma_radar.copy()
+def ema_signal(row):
+    days = row.get("Days_Since_Price_EMA20_Cross")
+    cross = row.get("Price_EMA20_Last_Cross")
+    pct = row.get("Pct_Above_EMA20")
 
+    if pd.notna(days) and days <= 5:
+        if cross == "CROSS ABOVE":
+            return "▲ FRESH CROSS"
+        elif cross == "CROSS BELOW":
+            return "▼ FRESH CROSS"
+
+    if pd.notna(pct):
+        if abs(pct) <= 0.02:
+            return "● NEAR EMA20"
+        elif pct > 0:
+            return "▲ ABOVE EMA20"
+        else:
+            return "▼ BELOW EMA20"
+
+    return "— UNKNOWN"
+
+
+radar["EMA_Signal"] = radar.apply(ema_signal, axis=1)
     # --------------------------------------------------------
     # BASIC CLEANUP
     # --------------------------------------------------------
@@ -340,50 +362,88 @@ elif page == "MA / EMA Radar":
     st.subheader("Market Radar")
 
     filter_choice = st.selectbox(
-        "Radar View",
-        [
-            "All Assets",
-            "Recent Cross Above EMA20",
-            "Recent Cross Below EMA20",
-            "Near EMA20",
-            "Above EMA20",
-            "Below EMA20",
-        ]
-    )
+    "Radar View",
+    [
+        "All Assets",
+        "Fresh Cross Above EMA20",
+        "Fresh Cross Below EMA20",
+        "Near EMA20",
+        "Above EMA20",
+        "Below EMA20",
+        "Early Entry + Above EMA20",
+        "Emerging + Above EMA20",
+        "Leaders Near EMA20",
+        "EMA20 Above MA30",
+        "Extended Above EMA20",
+    ]
+)
 
     filtered = radar.copy()
 
-    if filter_choice == "Recent Cross Above EMA20":
+    if filter_choice == "Fresh Cross Above EMA20":
 
-        filtered = filtered[
-            (filtered["Price_EMA20_Last_Cross"] == "CROSS ABOVE") &
-            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
-        ]
+    filtered = filtered[
+        (filtered["Price_EMA20_Last_Cross"] == "CROSS ABOVE") &
+        (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+    ]
 
-    elif filter_choice == "Recent Cross Below EMA20":
+elif filter_choice == "Fresh Cross Below EMA20":
 
-        filtered = filtered[
-            (filtered["Price_EMA20_Last_Cross"] == "CROSS BELOW") &
-            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
-        ]
+    filtered = filtered[
+        (filtered["Price_EMA20_Last_Cross"] == "CROSS BELOW") &
+        (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+    ]
 
-    elif filter_choice == "Near EMA20":
+elif filter_choice == "Near EMA20":
 
-        filtered = filtered[
-            filtered["Pct_Above_EMA20"].abs() <= 0.02
-        ]
+    filtered = filtered[
+        filtered["Pct_Above_EMA20"].abs() <= 0.02
+    ]
 
-    elif filter_choice == "Above EMA20":
+elif filter_choice == "Above EMA20":
 
-        filtered = filtered[
-            filtered["Pct_Above_EMA20"] > 0
-        ]
+    filtered = filtered[
+        filtered["Pct_Above_EMA20"] > 0
+    ]
 
-    elif filter_choice == "Below EMA20":
+elif filter_choice == "Below EMA20":
 
-        filtered = filtered[
-            filtered["Pct_Above_EMA20"] < 0
-        ]
+    filtered = filtered[
+        filtered["Pct_Above_EMA20"] < 0
+    ]
+
+elif filter_choice == "Early Entry + Above EMA20":
+
+    filtered = filtered[
+        (filtered["Early_Rotation_State"] == "EARLY ENTRY") &
+        (filtered["Pct_Above_EMA20"] > 0)
+    ]
+
+elif filter_choice == "Emerging + Above EMA20":
+
+    filtered = filtered[
+        (filtered["Rotation_State"] == "EMERGING") &
+        (filtered["Pct_Above_EMA20"] > 0)
+    ]
+
+elif filter_choice == "Leaders Near EMA20":
+
+    filtered = filtered[
+        (filtered["Rotation_State"] == "LEADER") &
+        (filtered["Pct_Above_EMA20"].abs() <= 0.02)
+    ]
+
+elif filter_choice == "EMA20 Above MA30":
+
+    filtered = filtered[
+        filtered["EMA20_Above_MA30"] == True
+    ]
+
+elif filter_choice == "Extended Above EMA20":
+
+    filtered = filtered[
+        filtered["Pct_Above_EMA20"] > 0.08
+    ]
 
     # --------------------------------------------------------
     # SORT CONTROLS
@@ -401,9 +461,10 @@ elif page == "MA / EMA Radar":
 
     with c1:
         sort_label = st.selectbox(
-            "Sort By",
-            list(sort_options.keys())
-        )
+    "Sort By",
+    list(sort_options.keys()),
+    index=2
+)
 
     with c2:
         ascending = st.checkbox(
@@ -425,42 +486,90 @@ elif page == "MA / EMA Radar":
     # --------------------------------------------------------
 
     radar_cols = [
-        c for c in [
-            "Ticker",
-            "Price",
-            "EMA20",
-            "Pct_Above_EMA20",
-            "Price_EMA20_Last_Cross",
-            "Days_Since_Price_EMA20_Cross",
-            "EMA20_Zone",
-            "MA30",
-            "Pct_Above_MA30",
-            "MA50",
-            "Pct_Above_MA50",
-            "MA100",
-            "Pct_Above_MA100",
-            "MA200",
-            "Pct_Above_MA200",
-            "EMA20_Slope_5D_Pct",
-            "MA30_Slope_5D_Pct",
-            "Early_Rotation_State",
-            "Early_Rotation_Score",
-            "Rotation_State",
-            "Rotation_Readiness_Score",
-        ]
-        if c in filtered.columns
+    c for c in [
+        "Ticker",
+        "EMA_Signal",
+        "Price",
+        "EMA20",
+        "Pct_Above_EMA20",
+        "Price_EMA20_Last_Cross",
+        "Days_Since_Price_EMA20_Cross",
+        "EMA20_Zone",
+        "MA30",
+        "MA50",
+        "MA100",
+        "MA200",
+        "EMA20_Slope_5D_Pct",
+        "MA30_Slope_5D_Pct",
+        "Early_Rotation_State",
+        "Early_Rotation_Score",
+        "Rotation_State",
+        "Rotation_Readiness_Score",
     ]
+    if c in filtered.columns
+]
 
     st.caption(
         f"Showing {len(filtered)} of {len(radar)} assets."
     )
+display_radar = filtered[radar_cols].copy()
 
-    st.dataframe(
-        filtered[radar_cols],
-        use_container_width=True,
-        hide_index=True,
-        height=650
+if "Pct_Above_EMA20" in display_radar.columns:
+    display_radar["Pct_Above_EMA20"] = (
+        display_radar["Pct_Above_EMA20"] * 100
     )
+    st.dataframe(
+    display_radar,
+    use_container_width=True,
+    hide_index=True,
+    height=650,
+    column_config={
+        "Ticker": st.column_config.TextColumn(
+            "Ticker",
+            width="small"
+        ),
+
+        "EMA_Signal": st.column_config.TextColumn(
+            "EMA Signal",
+            width="medium"
+        ),
+
+        "Price": st.column_config.NumberColumn(
+            "Price",
+            format="$%.2f"
+        ),
+
+        "EMA20": st.column_config.NumberColumn(
+            "EMA20",
+            format="$%.2f"
+        ),
+
+        "Pct_Above_EMA20": st.column_config.NumberColumn(
+            "% vs EMA20",
+            format="%.1f%%"
+        ),
+
+        "EMA20_Slope_5D_Pct": st.column_config.NumberColumn(
+            "EMA20 5D Slope",
+            format="%.2f"
+        ),
+
+        "MA30_Slope_5D_Pct": st.column_config.NumberColumn(
+            "MA30 5D Slope",
+            format="%.2f"
+        ),
+
+        "Early_Rotation_Score": st.column_config.NumberColumn(
+            "Early Score",
+            format="%.1f"
+        ),
+
+        "Rotation_Readiness_Score": st.column_config.NumberColumn(
+            "Readiness",
+            format="%.1f"
+        ),
+    }
+)
 
     st.divider()
 
