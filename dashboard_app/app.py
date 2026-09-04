@@ -362,7 +362,127 @@ elif page == "MA / EMA Radar":
     )
 
     st.divider()
+    # --------------------------------------------------------
+    # MA STRUCTURE BEACH
+    # --------------------------------------------------------
 
+    st.subheader("MA Structure Beach")
+
+    st.caption(
+        "Whole-universe view of price positioning relative to the "
+        "EMA20 and major moving averages. ▲ = above, ▼ = below."
+    )
+
+    def ma_position_text(price, ma_value):
+        if pd.isna(price) or pd.isna(ma_value) or ma_value == 0:
+            return "—"
+
+        pct = ((price / ma_value) - 1) * 100
+
+        if pct >= 0:
+            return f"▲ {pct:+.1f}%"
+        else:
+            return f"▼ {pct:+.1f}%"
+
+    beach = radar.copy()
+
+    beach["EMA20 Position"] = beach.apply(
+        lambda row: ma_position_text(
+            row.get("Price"),
+            row.get("EMA20")
+        ),
+        axis=1
+    )
+
+    beach["MA30 Position"] = beach.apply(
+        lambda row: ma_position_text(
+            row.get("Price"),
+            row.get("MA30")
+        ),
+        axis=1
+    )
+
+    beach["MA50 Position"] = beach.apply(
+        lambda row: ma_position_text(
+            row.get("Price"),
+            row.get("MA50")
+        ),
+        axis=1
+    )
+
+    beach["MA100 Position"] = beach.apply(
+        lambda row: ma_position_text(
+            row.get("Price"),
+            row.get("MA100")
+        ),
+        axis=1
+    )
+
+    beach["MA200 Position"] = beach.apply(
+        lambda row: ma_position_text(
+            row.get("Price"),
+            row.get("MA200")
+        ),
+        axis=1
+    )
+
+    beach_cols = [
+        "Ticker",
+        "EMA20 Position",
+        "MA30 Position",
+        "MA50 Position",
+        "MA100 Position",
+        "MA200 Position",
+        "Early_Rotation_State",
+        "Rotation_State",
+    ]
+
+    beach_cols = [
+        col for col in beach_cols
+        if col in beach.columns
+    ]
+
+    beach_display = beach[beach_cols].copy()
+
+    beach_display = beach_display.sort_values(
+        "Ticker",
+        ascending=True
+    )
+
+    st.dataframe(
+        beach_display,
+        width="stretch",
+        hide_index=True,
+        height=500,
+        column_config={
+            "Ticker": st.column_config.TextColumn(
+                "Ticker",
+                width="small"
+            ),
+            "EMA20 Position": st.column_config.TextColumn(
+                "EMA20",
+                width="small"
+            ),
+            "MA30 Position": st.column_config.TextColumn(
+                "MA30",
+                width="small"
+            ),
+            "MA50 Position": st.column_config.TextColumn(
+                "MA50",
+                width="small"
+            ),
+            "MA100 Position": st.column_config.TextColumn(
+                "MA100",
+                width="small"
+            ),
+            "MA200 Position": st.column_config.TextColumn(
+                "MA200",
+                width="small"
+            ),
+        }
+    )
+
+    st.divider()
     # --------------------------------------------------------
     # RADAR FILTER
     # --------------------------------------------------------
