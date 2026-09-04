@@ -906,11 +906,19 @@ c2.metric(
     delta=f"Score {fmt_num(early_score)}"
 )
 
-c3.metric(
-    "Rotation State",
-    rotation_state,
-    delta=f"Readiness {fmt_num(readiness_score)}"
-)
+if pd.notna(readiness_score):
+    c3.metric(
+        "Rotation State",
+        rotation_state,
+        delta=f"Readiness {fmt_num(readiness_score)}"
+    )
+else:
+    c3.metric(
+        "Rotation State",
+        rotation_state,
+        delta="Readiness not available",
+        delta_color="off"
+    )
 
 c4.metric(
     "EMA20 Position",
@@ -927,24 +935,33 @@ reasons = []
 
 if last_cross == "CROSS ABOVE":
     if pd.notna(days_since_cross):
-        reasons.append(
-            f"▲ Price crossed ABOVE EMA20 "
-            f"{int(days_since_cross)} trading day(s) ago."
-        )
+        if days_since_cross <= 5:
+            reasons.append(
+                f"▲ FRESH EMA20 cross ABOVE — "
+                f"{int(days_since_cross)} trading day(s) ago."
+            )
+        else:
+            reasons.append(
+                f"● Last EMA20 cross was ABOVE — "
+                f"{int(days_since_cross)} trading day(s) ago."
+            )
     else:
-        reasons.append("▲ Price recently crossed ABOVE EMA20.")
+        reasons.append("▲ Last identified EMA20 cross was ABOVE.")
 
 elif last_cross == "CROSS BELOW":
     if pd.notna(days_since_cross):
-        reasons.append(
-            f"▼ Price crossed BELOW EMA20 "
-            f"{int(days_since_cross)} trading day(s) ago."
-        )
+        if days_since_cross <= 5:
+            reasons.append(
+                f"▼ FRESH EMA20 cross BELOW — "
+                f"{int(days_since_cross)} trading day(s) ago."
+            )
+        else:
+            reasons.append(
+                f"● Last EMA20 cross was BELOW — "
+                f"{int(days_since_cross)} trading day(s) ago."
+            )
     else:
-        reasons.append("▼ Price recently crossed BELOW EMA20.")
-
-else:
-    reasons.append("— No recent EMA20 cross is currently identified.")
+        reasons.append("▼ Last identified EMA20 cross was BELOW.")
 
 reasons.append(
     f"{'▲' if above_ema20 else '▼'} "
