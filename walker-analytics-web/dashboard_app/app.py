@@ -483,6 +483,317 @@ elif page == "MA / EMA Radar":
     )
 
     st.divider()
+
+    # --------------------------------------------------------
+    # ACTIONABLE SETUP MONITOR
+    # --------------------------------------------------------
+
+    st.subheader("Actionable Setup Monitor")
+
+    st.caption(
+        "Rule-based decision-support screen combining EMA20 behavior, "
+        "moving-average structure, trend slope, and rotation evidence. "
+        "Designed to identify assets that deserve further investigation."
+    )
+
+    def classify_setup(row):
+
+        price = row.get("Price")
+        ema20 = row.get("EMA20")
+        ma30 = row.get("MA30")
+        ma50 = row.get("MA50")
+        ma100 = row.get("MA100")
+        ma200 = row.get("MA200")
+
+        pct_ema = row.get("Pct_Above_EMA20")
+        days_cross = row.get("Days_Since_Price_EMA20_Cross")
+        cross = row.get("Price_EMA20_Last_Cross")
+        ema_slope = row.get("EMA20_Slope_5D_Pct")
+
+        early_state = row.get("Early_Rotation_State")
+        rotation_state = row.get("Rotation_State")
+
+        # --------------------------------------------
+        # Supporting conditions
+        # --------------------------------------------
+
+        fresh_above = (
+            cross == "CROSS ABOVE"
+            and pd.notna(days_cross)
+            and days_cross <= 5
+        )
+
+        fresh_below = (
+            cross == "CROSS BELOW"
+            and pd.notna(days_cross)
+            and days_cross <= 5
+        )
+
+        near_ema = (
+            pd.notna(pct_ema)
+            and abs(pct_ema) <= 0.02
+        )
+
+        positive_slope = (
+            pd.notna(ema_slope)
+            and ema_slope > 0
+        )
+
+        above_50 = (
+            pd.notna(price)
+            and pd.notna(ma50)
+            and price > ma50
+        )
+
+        above_100 = (
+            pd.notna(price)
+            and pd.notna(ma100)
+            and price > ma100
+        )
+
+        above_200 = (
+            pd.notna(price)
+            and pd.notna(ma200)
+            and price > ma200
+        )
+
+        long_term_support = (
+            above_50
+            and (above_100 or above_200)
+        )
+
+        rotation_positive = (
+            early_state in ["EARLY ENTRY", "BUILDING"]
+            or rotation_state in ["EMERGING", "LEADER"]
+        )
+
+        # --------------------------------------------
+        # Classification hierarchy
+        # --------------------------------------------
+
+        if (
+            fresh_above
+            and positive_slope
+            and long_term_support
+            and rotation_positive
+        ):
+            return "▲ HIGH INTEREST"
+
+        elif (
+            fresh_below
+            and long_term_support
+        ):
+            return "▼ PULLBACK WATCH"
+
+        elif (
+            near_ema
+            and positive_slope
+            and long_term_support
+        ):
+            return "● SETUP WATCH"
+
+        elif fresh_below:
+            return "▼ CAUTION"
+
+        elif fresh_above:
+            return "▲ EARLY CROSS"
+
+        else:
+            return "— NO SETUP"
+
+    radar["Setup_Status"] = radar.apply(
+        classify_setup,
+        axis=1
+    )
+
+    setup_counts = radar["Setup_Status"].value_counts()
+
+    high_interest_count = setup_counts.get(
+        "▲ HIGH INTEREST", 0
+    )
+
+    pullback_count = setup_counts.get(
+        "▼ PULLBACK WATCH", 0
+    )
+
+    setup_watch_count = setup_counts.get(
+        "● SETUP WATCH", 0
+    )
+
+    caution_count = setup_counts.get(
+        "▼ CAUTION", 0
+    )
+
+    early_cross_count = setup_counts.get(
+        "▲ EARLY CROSS", 0
+    )
+
+    s1, s2, s3, s4, s5 = st.columns(5)
+
+    s1.metric(
+        "High Interest",
+        int(high_interest_count)
+    )
+
+    s2.metric(
+        "Pullback Watch",
+        int(pullback_count)
+    )
+
+    s3.metric(
+        "Setup Watch",
+        int(setup_watch_count)
+    )
+
+    s4.metric(
+        "Early Cross",
+        int(early_cross_count)
+    )
+
+    s5.metric(
+        "Caution",
+        int(caution_count)
+    )
+
+    actionable = radar[
+        radar["Setup_Status"] != "— NO SETUP"
+    ].copy()
+
+    setup_priority = {
+        "▲ HIGH INTEREST": 1,
+        "▼ PULLBACK WATCH": 2,
+        "● SETUP WATCH": 3,
+        "▲ EARLY CROSS": 4,
+        "▼ CAUTION": 5,
+    }
+
+    actionable["Setup_Priority"] = (
+        actionable["Setup_Status"]
+        .map(setup_priority)
+        .fillna(99)
+    )
+
+    actionable = actionable.sort_values(
+        [
+            "Setup_Priority",
+            "Rotation_Readiness_Score",
+            "Early_Rotation_Score",
+        ],
+        ascending=[True, False, False],
+        na_position="last"
+    )
+
+    setup_cols = [
+        c for c in [
+            "Ticker",
+            "Setup_Status",
+            "Price",
+            "EMA20",
+            "Pct_Above_EMA20",
+            "Price_EMA20_Last_Cross",
+            "Days_Since_Price_EMA20_Cross",
+            "EMA20_Slope_5D_Pct",
+            "MA50",
+            "MA100",
+            "MA200",
+            "Early_Rotation_State",
+            "Early_Rotation_Score",
+            "Rotation_State",
+            "Rotation_Readiness_Score",
+        ]
+        if c in actionable.columns
+    ]
+
+    setup_display = actionable[
+        setup_cols
+    ].copy()
+
+    if "Pct_Above_EMA20" in setup_display.columns:
+        setup_display["Pct_Above_EMA20"] = (
+            setup_display["Pct_Above_EMA20"] * 100
+        )
+
+    st.caption(
+        f"{len(actionable)} of {len(radar)} assets currently "
+        "meet at least one setup condition."
+    )
+
+    st.dataframe(
+        setup_display,
+        width="stretch",
+        hide_index=True,
+        height=450,
+        column_config={
+
+            "Ticker": st.column_config.TextColumn(
+                "Ticker",
+                width="small"
+            ),
+
+            "Setup_Status": st.column_config.TextColumn(
+                "Setup",
+                width="medium"
+            ),
+
+            "Price": st.column_config.NumberColumn(
+                "Price",
+                format="$%.2f"
+            ),
+
+            "EMA20": st.column_config.NumberColumn(
+                "EMA20",
+                format="$%.2f"
+            ),
+
+            "Pct_Above_EMA20": st.column_config.NumberColumn(
+                "% vs EMA20",
+                format="%.1f%%"
+            ),
+
+            "Price_EMA20_Last_Cross":
+                st.column_config.TextColumn(
+                    "Last EMA20 Cross"
+                ),
+
+            "Days_Since_Price_EMA20_Cross":
+                st.column_config.NumberColumn(
+                    "Days Since Cross",
+                    format="%d"
+                ),
+
+            "EMA20_Slope_5D_Pct":
+                st.column_config.NumberColumn(
+                    "EMA20 5D Slope",
+                    format="%.2f"
+                ),
+
+            "Early_Rotation_State":
+                st.column_config.TextColumn(
+                    "Early Rotation"
+                ),
+
+            "Early_Rotation_Score":
+                st.column_config.NumberColumn(
+                    "Early Score",
+                    format="%.1f"
+                ),
+
+            "Rotation_State":
+                st.column_config.TextColumn(
+                    "Rotation State"
+                ),
+
+            "Rotation_Readiness_Score":
+                st.column_config.NumberColumn(
+                    "Readiness",
+                    format="%.1f"
+                ),
+        }
+    )
+
+    st.divider()
+
+
     # --------------------------------------------------------
     # RADAR FILTER
     # --------------------------------------------------------
