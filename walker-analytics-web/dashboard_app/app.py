@@ -33,6 +33,7 @@ EARLY_FILE = DATA_DIR / "web_early_rotation_snapshot.csv"
 PRICE_FILE = DATA_DIR / "sector_prices.csv"
 MA_WIDE_FILE = DATA_DIR / "moving_average_wide.csv"
 MA_RADAR_FILE = DATA_DIR / "web_ma_wide_snapshot.csv"
+DECISION_FILE = DATA_DIR / "web_rotation_decision_snapshot.csv"
 REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
 # ============================================================
 # LOAD DATA
@@ -46,12 +47,13 @@ def load_data():
     prices = pd.read_csv(PRICE_FILE)
     ma_wide = pd.read_csv(MA_WIDE_FILE)
     ma_radar = pd.read_csv(MA_RADAR_FILE)
+    decision = pd.read_csv(DECISION_FILE)
     refresh = pd.read_csv(REFRESH_FILE)
 
-    return snapshot, rotation, early, prices, ma_wide, ma_radar, refresh
+    return snapshot, rotation, early, prices, ma_wide, ma_radar, decision, refresh
 
 
-snapshot, rotation, early, prices, ma_wide, ma_radar, refresh = load_data()
+snapshot, rotation, early, prices, ma_wide, ma_radar, decision, refresh = load_data()
 
 # ============================================================
 # GLOBAL HEADER

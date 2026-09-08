@@ -30,4 +30,8 @@ archived_notebooks/
 # dashboard_app is intentionally NOT ignored
 # notebooks is intentionally NOT ignored
 # Old/duplicate Streamlit deployment folder
-walker-analytics-web/
+walker-analytics-web/ 
+# Local ML research outputs - do not deploy to GitHub 
+data_processed/ml_*.csv 
+walker-analytics-web/data_processed/ml_*.csv
+data_processed/ma200_*.csv
