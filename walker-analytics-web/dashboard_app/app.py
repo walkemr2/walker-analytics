@@ -1251,10 +1251,36 @@ elif page == "Rotation Decision Support":
             return "N/A"
         return f"{value * 100:+.{decimals}f}%"
 
+    def ordinal_integer(number):
+        integer = int(round(number))
+
+        if 10 <= (integer % 100) <= 20:
+            suffix = "th"
+        else:
+            suffix = {
+                1: "st",
+                2: "nd",
+                3: "rd",
+            }.get(integer % 10, "th")
+
+        return f"{integer}{suffix}"
+
     def display_percentile(value):
         if pd.isna(value):
             return "N/A"
-        return f"{value * 100:.1f}th percentile"
+        return f"{ordinal_integer(value * 100)} percentile"
+
+
+    def display_date(value):
+        if pd.isna(value):
+            return "N/A"
+
+        parsed = pd.to_datetime(value, errors="coerce")
+
+        if pd.isna(parsed):
+            return str(value)
+
+        return parsed.strftime("%Y-%m-%d")
 
     # --------------------------------------------------------
     # CURRENT OPPORTUNITY PIPELINE
@@ -1316,8 +1342,10 @@ elif page == "Rotation Decision Support":
             "Signal_Window",
             "ML_Quality",
             "ML_Daily_PctRank",
+            "ML_Signal_Date",
             "Confirmation_State",
             "Structure_State",
+            "Structure_History_Status",
             "Early_Rotation_State",
             "Rotation_State",
             "Distance_To_MA50",
@@ -1358,6 +1386,116 @@ elif page == "Rotation Decision Support":
     st.divider()
 
     # --------------------------------------------------------
+    # TECHNOLOGY COMPLEX
+    # --------------------------------------------------------
+
+    st.subheader("Technology Complex")
+    st.caption(
+        "Peer-context view for the current technology / semiconductor complex. "
+        "This is a lifecycle comparison, not an additional score."
+    )
+
+    tech_tickers = ["XLK", "DRAM", "SOXX", "SMH"]
+
+    tech = d[
+        d["Ticker"].isin(tech_tickers)
+    ].copy()
+
+    if not tech.empty:
+        tech["Complex_Order"] = tech["Ticker"].map({
+            "XLK": 1,
+            "DRAM": 2,
+            "SOXX": 3,
+            "SMH": 4,
+        }).fillna(99)
+
+        tech = tech.sort_values("Complex_Order")
+
+        tech_cols = [
+            c for c in [
+                "Ticker",
+                "Decision_Support_State",
+                "Detection_State",
+                "Signal_Window",
+                "ML_Quality",
+                "ML_Daily_PctRank",
+                "Confirmation_State",
+                "Structure_State",
+                "Rotation_State",
+            ]
+            if c in tech.columns
+        ]
+
+        tech_display = tech[tech_cols].copy()
+
+        if "ML_Daily_PctRank" in tech_display.columns:
+            tech_display["ML_Daily_PctRank"] = (
+                tech_display["ML_Daily_PctRank"] * 100
+            )
+
+        st.dataframe(
+            tech_display,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+                "Decision_Support_State": st.column_config.TextColumn(
+                    "Decision Support",
+                    width="medium"
+                ),
+                "Detection_State": st.column_config.TextColumn(
+                    "Detection",
+                    width="medium"
+                ),
+                "Signal_Window": st.column_config.TextColumn(
+                    "Signal Window",
+                    width="medium"
+                ),
+                "ML_Quality": st.column_config.TextColumn(
+                    "ML Quality",
+                    width="medium"
+                ),
+                "ML_Daily_PctRank": st.column_config.NumberColumn(
+                    "ML Daily Rank",
+                    format="%.1f%%"
+                ),
+                "Confirmation_State": st.column_config.TextColumn(
+                    "Confirmation",
+                    width="medium"
+                ),
+                "Structure_State": st.column_config.TextColumn(
+                    "MA Structure",
+                    width="medium"
+                ),
+                "Rotation_State": st.column_config.TextColumn(
+                    "Rotation State",
+                    width="small"
+                ),
+            }
+        )
+
+        lifecycle_lines = []
+
+        for _, tech_row in tech.iterrows():
+            lifecycle_lines.append(
+                f"**{tech_row.get('Ticker', 'N/A')}** — "
+                f"{tech_row.get('Decision_Support_State', 'N/A')} | "
+                f"{tech_row.get('Detection_State', 'N/A')} | "
+                f"{tech_row.get('Rotation_State', 'N/A')}"
+            )
+
+        st.markdown("#### Current Lifecycle Read")
+        for line in lifecycle_lines:
+            st.markdown(line)
+
+    else:
+        st.info(
+            "Technology complex tickers are not available in the current decision snapshot."
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
     # TICKER FOCUS
     # --------------------------------------------------------
 
@@ -1390,6 +1528,16 @@ elif page == "Rotation Decision Support":
     f7.metric("MA Structure", row.get("Structure_State", "N/A"))
     f8.metric("Rotation State", row.get("Rotation_State", "N/A"))
 
+    f9, f10 = st.columns(2)
+    f9.metric(
+        "Structure History",
+        row.get("Structure_History_Status", "N/A")
+    )
+    f10.metric(
+        "ML Signal Date",
+        display_date(row.get("ML_Signal_Date"))
+    )
+
     st.markdown("#### Structure and Distance")
 
     s1, s2, s3, s4 = st.columns(4)
@@ -1397,7 +1545,11 @@ elif page == "Rotation Decision Support":
     s1.metric("Price", f"${price_value:.2f}" if pd.notna(price_value) else "N/A")
     s2.metric("vs EMA20", display_pct_fraction(row.get("Distance_To_EMA20")))
     s3.metric("vs MA50", display_pct_fraction(row.get("Distance_To_MA50")))
-    s4.metric("vs MA200", display_pct_fraction(row.get("Distance_To_MA200")))
+
+    if pd.notna(row.get("MA200")):
+        s4.metric("vs MA200", display_pct_fraction(row.get("Distance_To_MA200")))
+    else:
+        s4.metric("vs MA200", "N/A — insufficient history")
 
     st.markdown("#### Why It Is Here")
 
@@ -1408,6 +1560,8 @@ elif page == "Rotation Decision Support":
         f"({display_percentile(row.get('ML_Daily_PctRank'))})",
         f"**Confirmation:** {row.get('Confirmation_State', 'N/A')}",
         f"**Moving-average structure:** {row.get('Structure_State', 'N/A')}",
+        f"**Structure history:** {row.get('Structure_History_Status', 'N/A')}",
+        f"**ML signal date:** {display_date(row.get('ML_Signal_Date'))}",
         f"**Early rotation:** {row.get('Early_Rotation_State', 'N/A')}",
         f"**Confirmed rotation:** {row.get('Rotation_State', 'N/A')}",
     ]
@@ -1436,9 +1590,26 @@ elif page == "Rotation Decision Support":
     with r1:
         st.markdown("#### Structural Risk References")
         st.write(f"**Initial risk research reference:** {row.get('Initial_Risk_Reference', 'N/A')}")
-        st.write(f"**Long-term structural reference:** {row.get('Long_Term_Structural_Reference', 'N/A')}")
-        st.write(f"**Current distance to MA50:** {display_pct_fraction(row.get('Distance_To_MA50'))}")
-        st.write(f"**Current distance to MA200:** {display_pct_fraction(row.get('Distance_To_MA200'))}")
+
+        if pd.notna(row.get("MA200")):
+            st.write(
+                f"**Long-term structural reference:** "
+                f"{row.get('Long_Term_Structural_Reference', 'N/A')}"
+            )
+            st.write(
+                f"**Current distance to MA200:** "
+                f"{display_pct_fraction(row.get('Distance_To_MA200'))}"
+            )
+        else:
+            st.write(
+                "**Long-term structural reference:** "
+                "N/A — MA200 not yet available because the asset lacks sufficient price history"
+            )
+
+        st.write(
+            f"**Current distance to MA50:** "
+            f"{display_pct_fraction(row.get('Distance_To_MA50'))}"
+        )
 
     with r2:
         st.markdown("#### Earned Protection")
@@ -1469,8 +1640,10 @@ elif page == "Rotation Decision Support":
             "Detection_State",
             "ML_Quality",
             "ML_Daily_PctRank",
+            "ML_Signal_Date",
             "Confirmation_State",
             "Structure_State",
+            "Structure_History_Status",
             "Early_Rotation_State",
             "Rotation_State",
             "Distance_To_MA50",
