@@ -796,348 +796,276 @@ elif page == "MA / EMA Radar":
 
     st.divider()
 
-# ---------------------------------------------------------
-# TICKER FOCUS / WHY THIS SETUP?
-# ---------------------------------------------------------
 
-st.divider()
-st.subheader("Ticker Focus")
+    # ---------------------------------------------------------
+    # TICKER FOCUS / WHY THIS SETUP?
+    # ---------------------------------------------------------
 
-st.caption(
-    "Select an asset to see why the current EMA / MA and rotation "
-    "conditions produced its present setup classification."
-)
+    st.divider()
+    st.subheader("Ticker Focus")
 
-focus_tickers = sorted(radar["Ticker"].dropna().unique())
-
-focus_ticker = st.selectbox(
-    "Select Ticker",
-    focus_tickers,
-    key="radar_focus_ticker"
-)
-
-focus_row = radar.loc[radar["Ticker"] == focus_ticker].iloc[0]
-
-
-def fmt_pct(value, decimals=1):
-    if pd.isna(value):
-        return "N/A"
-    return f"{value:+.{decimals}f}%"
-
-
-def fmt_num(value, decimals=1):
-    if pd.isna(value):
-        return "N/A"
-    return f"{value:.{decimals}f}"
-
-
-def yes_no(condition):
-    return "YES" if condition else "NO"
-
-
-setup_status = focus_row.get("Setup_Status", "— NO SETUP")
-price = focus_row.get("Price")
-ema20 = focus_row.get("EMA20")
-ma30 = focus_row.get("MA30")
-ma50 = focus_row.get("MA50")
-ma100 = focus_row.get("MA100")
-ma200 = focus_row.get("MA200")
-
-pct_ema20 = focus_row.get("Pct_Above_EMA20")
-ema20_slope = focus_row.get("EMA20_Slope_5D_Pct")
-ma30_slope = focus_row.get("MA30_Slope_5D_Pct")
-
-last_cross = focus_row.get("Price_EMA20_Last_Cross", "N/A")
-days_since_cross = focus_row.get("Days_Since_Price_EMA20_Cross")
-
-early_state = focus_row.get("Early_Rotation_State", "N/A")
-early_score = focus_row.get("Early_Rotation_Score")
-
-rotation_state = focus_row.get("Rotation_State", "N/A")
-readiness_score = focus_row.get("Rotation_Readiness_Score")
-
-above_ema20 = (
-    pd.notna(price)
-    and pd.notna(ema20)
-    and price >= ema20
-)
-
-above_ma30 = (
-    pd.notna(price)
-    and pd.notna(ma30)
-    and price >= ma30
-)
-
-above_ma50 = (
-    pd.notna(price)
-    and pd.notna(ma50)
-    and price >= ma50
-)
-
-above_ma100 = (
-    pd.notna(price)
-    and pd.notna(ma100)
-    and price >= ma100
-)
-
-above_ma200 = (
-    pd.notna(price)
-    and pd.notna(ma200)
-    and price >= ma200
-)
-
-positive_ema_slope = (
-    pd.notna(ema20_slope)
-    and ema20_slope > 0
-)
-
-rotation_positive = (
-    early_state in ["EARLY ENTRY", "BUILDING"]
-    or rotation_state in ["EMERGING", "LEADER"]
-)
-
-c1, c2, c3, c4 = st.columns(4)
-
-c1.metric(
-    "Setup",
-    setup_status
-)
-
-c2.metric(
-    "Early Rotation",
-    early_state,
-    delta=f"Score {fmt_num(early_score)}"
-)
-
-if pd.notna(readiness_score):
-    c3.metric(
-        "Rotation State",
-        rotation_state,
-        delta=f"Readiness {fmt_num(readiness_score)}"
-    )
-else:
-    c3.metric(
-        "Rotation State",
-        rotation_state,
-        delta="Readiness not available",
-        delta_color="off"
+    st.caption(
+        "Select an asset to see why the current EMA / MA and rotation "
+        "conditions produced its present setup classification."
     )
 
-c4.metric(
-    "EMA20 Position",
-    fmt_pct(
-        pct_ema20 * 100
-        if pd.notna(pct_ema20)
-        else float("nan")
+    focus_tickers = sorted(radar["Ticker"].dropna().unique())
+
+    focus_ticker = st.selectbox(
+        "Select Ticker",
+        focus_tickers,
+        key="radar_focus_ticker"
     )
-)
 
-st.markdown("#### Why This Setup?")
+    focus_row = radar.loc[radar["Ticker"] == focus_ticker].iloc[0]
 
-reasons = []
+    def radar_fmt_pct(value, decimals=1):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value:+.{decimals}f}%"
 
-if last_cross == "CROSS ABOVE":
-    if pd.notna(days_since_cross):
-        if days_since_cross <= 5:
-            reasons.append(
-                f"▲ FRESH EMA20 cross ABOVE — "
-                f"{int(days_since_cross)} trading day(s) ago."
-            )
-        else:
-            reasons.append(
-                f"● Last EMA20 cross was ABOVE — "
-                f"{int(days_since_cross)} trading day(s) ago."
-            )
+    def radar_fmt_num(value, decimals=1):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value:.{decimals}f}"
+
+    setup_status = focus_row.get("Setup_Status", "— NO SETUP")
+    price = focus_row.get("Price")
+    ema20 = focus_row.get("EMA20")
+    ma30 = focus_row.get("MA30")
+    ma50 = focus_row.get("MA50")
+    ma100 = focus_row.get("MA100")
+    ma200 = focus_row.get("MA200")
+
+    pct_ema20 = focus_row.get("Pct_Above_EMA20")
+    ema20_slope = focus_row.get("EMA20_Slope_5D_Pct")
+    last_cross = focus_row.get("Price_EMA20_Last_Cross", "N/A")
+    days_since_cross = focus_row.get("Days_Since_Price_EMA20_Cross")
+
+    early_state = focus_row.get("Early_Rotation_State", "N/A")
+    early_score = focus_row.get("Early_Rotation_Score")
+    rotation_state = focus_row.get("Rotation_State", "N/A")
+    readiness_score = focus_row.get("Rotation_Readiness_Score")
+
+    above_ema20 = pd.notna(price) and pd.notna(ema20) and price >= ema20
+    above_ma30 = pd.notna(price) and pd.notna(ma30) and price >= ma30
+    above_ma50 = pd.notna(price) and pd.notna(ma50) and price >= ma50
+    above_ma100 = pd.notna(price) and pd.notna(ma100) and price >= ma100
+    above_ma200 = pd.notna(price) and pd.notna(ma200) and price >= ma200
+    positive_ema_slope = pd.notna(ema20_slope) and ema20_slope > 0
+
+    rotation_positive = (
+        early_state in ["EARLY ENTRY", "BUILDING"]
+        or rotation_state in ["EMERGING", "LEADER"]
+    )
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("Setup", setup_status)
+    c2.metric(
+        "Early Rotation",
+        early_state,
+        delta=f"Score {radar_fmt_num(early_score)}"
+    )
+
+    if pd.notna(readiness_score):
+        c3.metric(
+            "Rotation State",
+            rotation_state,
+            delta=f"Readiness {radar_fmt_num(readiness_score)}"
+        )
     else:
-        reasons.append("▲ Last identified EMA20 cross was ABOVE.")
+        c3.metric(
+            "Rotation State",
+            rotation_state,
+            delta="Readiness not available",
+            delta_color="off"
+        )
 
-elif last_cross == "CROSS BELOW":
-    if pd.notna(days_since_cross):
-        if days_since_cross <= 5:
-            reasons.append(
-                f"▼ FRESH EMA20 cross BELOW — "
-                f"{int(days_since_cross)} trading day(s) ago."
-            )
+    c4.metric(
+        "EMA20 Position",
+        radar_fmt_pct(
+            pct_ema20 * 100
+            if pd.notna(pct_ema20)
+            else float("nan")
+        )
+    )
+
+    st.markdown("#### Why This Setup?")
+
+    reasons = []
+
+    if last_cross == "CROSS ABOVE":
+        if pd.notna(days_since_cross):
+            if days_since_cross <= 5:
+                reasons.append(
+                    f"▲ FRESH EMA20 cross ABOVE — "
+                    f"{int(days_since_cross)} trading day(s) ago."
+                )
+            else:
+                reasons.append(
+                    f"● Last EMA20 cross was ABOVE — "
+                    f"{int(days_since_cross)} trading day(s) ago."
+                )
         else:
-            reasons.append(
-                f"● Last EMA20 cross was BELOW — "
-                f"{int(days_since_cross)} trading day(s) ago."
-            )
+            reasons.append("▲ Last identified EMA20 cross was ABOVE.")
+
+    elif last_cross == "CROSS BELOW":
+        if pd.notna(days_since_cross):
+            if days_since_cross <= 5:
+                reasons.append(
+                    f"▼ FRESH EMA20 cross BELOW — "
+                    f"{int(days_since_cross)} trading day(s) ago."
+                )
+            else:
+                reasons.append(
+                    f"● Last EMA20 cross was BELOW — "
+                    f"{int(days_since_cross)} trading day(s) ago."
+                )
+        else:
+            reasons.append("▼ Last identified EMA20 cross was BELOW.")
+
+    reasons.append(
+        f"{'▲' if above_ema20 else '▼'} "
+        f"Price is {'above' if above_ema20 else 'below'} EMA20."
+    )
+    reasons.append(
+        f"{'▲' if positive_ema_slope else '▼'} "
+        f"EMA20 5-day slope is "
+        f"{'positive' if positive_ema_slope else 'flat or negative'} "
+        f"({radar_fmt_pct(ema20_slope)})."
+    )
+    reasons.append(
+        f"{'▲' if above_ma30 else '▼'} "
+        f"Price is {'above' if above_ma30 else 'below'} MA30."
+    )
+    reasons.append(
+        f"{'▲' if above_ma50 else '▼'} "
+        f"Price is {'above' if above_ma50 else 'below'} MA50."
+    )
+
+    if pd.notna(ma100):
+        reasons.append(
+            f"{'▲' if above_ma100 else '▼'} "
+            f"Price is {'above' if above_ma100 else 'below'} MA100."
+        )
+
+    if pd.notna(ma200):
+        reasons.append(
+            f"{'▲' if above_ma200 else '▼'} "
+            f"Price is {'above' if above_ma200 else 'below'} MA200."
+        )
+
+    reasons.append(
+        f"{'▲' if rotation_positive else '●'} "
+        f"Rotation evidence is "
+        f"{'supportive' if rotation_positive else 'not yet fully supportive'} "
+        f"(Early: {early_state}; Confirmed: {rotation_state})."
+    )
+
+    for reason in reasons:
+        st.write(reason)
+
+    st.markdown("#### Decision-Support Interpretation")
+
+    if setup_status == "▲ HIGH INTEREST":
+        interpretation = (
+            "Technical structure and rotation evidence are aligned. "
+            "This asset deserves near-term investigation for a possible "
+            "entry, add, or continuation setup."
+        )
+    elif setup_status == "▼ PULLBACK WATCH":
+        interpretation = (
+            "Price has weakened through EMA20, but broader trend structure "
+            "remains sufficiently intact to investigate whether this is a "
+            "constructive pullback rather than a trend failure."
+        )
+    elif setup_status == "● SETUP WATCH":
+        interpretation = (
+            "The asset is near EMA20 with improving trend characteristics, "
+            "but the setup is not yet fully confirmed. Watch for additional "
+            "price or rotation confirmation."
+        )
+    elif setup_status == "▲ EARLY CROSS":
+        interpretation = (
+            "A fresh bullish EMA20 event has occurred, but broader trend "
+            "structure and/or rotation confirmation is incomplete. "
+            "Treat this as an early signal rather than a confirmed entry."
+        )
+    elif setup_status == "▼ CAUTION":
+        interpretation = (
+            "Recent EMA20 behavior indicates deterioration. Review broader "
+            "MA support, rotation state, and position risk before taking action."
+        )
     else:
-        reasons.append("▼ Last identified EMA20 cross was BELOW.")
+        interpretation = (
+            "The asset does not currently satisfy one of the actionable "
+            "setup conditions. Continue monitoring for a meaningful technical "
+            "or rotation change."
+        )
 
-reasons.append(
-    f"{'▲' if above_ema20 else '▼'} "
-    f"Price is {'above' if above_ema20 else 'below'} EMA20."
-)
-
-reasons.append(
-    f"{'▲' if positive_ema_slope else '▼'} "
-    f"EMA20 5-day slope is "
-    f"{'positive' if positive_ema_slope else 'flat or negative'} "
-    f"({fmt_pct(ema20_slope)})."
-)
-
-reasons.append(
-    f"{'▲' if above_ma30 else '▼'} "
-    f"Price is {'above' if above_ma30 else 'below'} MA30."
-)
-
-reasons.append(
-    f"{'▲' if above_ma50 else '▼'} "
-    f"Price is {'above' if above_ma50 else 'below'} MA50."
-)
-
-if pd.notna(ma100):
-    reasons.append(
-        f"{'▲' if above_ma100 else '▼'} "
-        f"Price is {'above' if above_ma100 else 'below'} MA100."
-    )
-
-if pd.notna(ma200):
-    reasons.append(
-        f"{'▲' if above_ma200 else '▼'} "
-        f"Price is {'above' if above_ma200 else 'below'} MA200."
-    )
-
-reasons.append(
-    f"{'▲' if rotation_positive else '●'} "
-    f"Rotation evidence is "
-    f"{'supportive' if rotation_positive else 'not yet fully supportive'} "
-    f"(Early: {early_state}; Confirmed: {rotation_state})."
-)
-
-for reason in reasons:
-    st.write(reason)
-
-st.markdown("#### Decision-Support Interpretation")
-
-if setup_status == "▲ HIGH INTEREST":
-    interpretation = (
-        "Technical structure and rotation evidence are aligned. "
-        "This asset deserves near-term investigation for a possible "
-        "entry, add, or continuation setup."
-    )
-
-elif setup_status == "▼ PULLBACK WATCH":
-    interpretation = (
-        "Price has weakened through EMA20, but broader trend structure "
-        "remains sufficiently intact to investigate whether this is a "
-        "constructive pullback rather than a trend failure."
-    )
-
-elif setup_status == "● SETUP WATCH":
-    interpretation = (
-        "The asset is near EMA20 with improving trend characteristics, "
-        "but the setup is not yet fully confirmed. Watch for additional "
-        "price or rotation confirmation."
-    )
-
-elif setup_status == "▲ EARLY CROSS":
-    interpretation = (
-        "A fresh bullish EMA20 event has occurred, but broader trend "
-        "structure and/or rotation confirmation is incomplete. "
-        "Treat this as an early signal rather than a confirmed entry."
-    )
-
-elif setup_status == "▼ CAUTION":
-    interpretation = (
-        "Recent EMA20 behavior indicates deterioration. Review broader "
-        "MA support, rotation state, and position risk before taking action."
-    )
-
-else:
-    interpretation = (
-        "The asset does not currently satisfy one of the actionable "
-        "setup conditions. Continue monitoring for a meaningful technical "
-        "or rotation change."
-    )
-
-st.info(interpretation)
-
+    st.info(interpretation)
 
     # --------------------------------------------------------
     # RADAR FILTER
     # --------------------------------------------------------
 
-st.subheader("Market Radar")
+    st.subheader("Market Radar")
 
-filter_choice = st.selectbox(
-    "Radar View",
-    [
-        "All Assets",
-        "Fresh Cross Above EMA20",
-        "Fresh Cross Below EMA20",
-        "Near EMA20",
-        "Above EMA20",
-        "Below EMA20",
-        "Early Entry + Above EMA20",
-        "Emerging + Above EMA20",
-        "Leaders Near EMA20",
-        "EMA20 Above MA30",
-        "Extended Above EMA20",
-    ]
-)
+    filter_choice = st.selectbox(
+        "Radar View",
+        [
+            "All Assets",
+            "Fresh Cross Above EMA20",
+            "Fresh Cross Below EMA20",
+            "Near EMA20",
+            "Above EMA20",
+            "Below EMA20",
+            "Early Entry + Above EMA20",
+            "Emerging + Above EMA20",
+            "Leaders Near EMA20",
+            "EMA20 Above MA30",
+            "Extended Above EMA20",
+        ]
+    )
 
-filtered = radar.copy()
+    filtered = radar.copy()
 
-if filter_choice == "Fresh Cross Above EMA20":
-    filtered = filtered[
-        (filtered["Price_EMA20_Last_Cross"] == "CROSS ABOVE") &
-        (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
-    ]
-
-elif filter_choice == "Fresh Cross Below EMA20":
-    filtered = filtered[
-        (filtered["Price_EMA20_Last_Cross"] == "CROSS BELOW") &
-        (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
-    ]
-
-elif filter_choice == "Near EMA20":
-    filtered = filtered[
-        filtered["Pct_Above_EMA20"].abs() <= 0.02
-    ]
-
-elif filter_choice == "Above EMA20":
-    filtered = filtered[
-        filtered["Pct_Above_EMA20"] > 0
-    ]
-
-elif filter_choice == "Below EMA20":
-    filtered = filtered[
-        filtered["Pct_Above_EMA20"] < 0
-    ]
-
-elif filter_choice == "Early Entry + Above EMA20":
-    filtered = filtered[
-        (filtered["Early_Rotation_State"] == "EARLY ENTRY") &
-        (filtered["Pct_Above_EMA20"] > 0)
-    ]
-
-elif filter_choice == "Emerging + Above EMA20":
-    filtered = filtered[
-        (filtered["Rotation_State"] == "EMERGING") &
-        (filtered["Pct_Above_EMA20"] > 0)
-    ]
-
-elif filter_choice == "Leaders Near EMA20":
-    filtered = filtered[
-        (filtered["Rotation_State"] == "LEADER") &
-        (filtered["Pct_Above_EMA20"].abs() <= 0.02)
-    ]
-
-elif filter_choice == "EMA20 Above MA30":
-    filtered = filtered[
-        filtered["EMA20_Above_MA30"] == True
-    ]
-
-elif filter_choice == "Extended Above EMA20":
-    filtered = filtered[
-        filtered["Pct_Above_EMA20"] > 0.08
-    ]
-    # --------------------------------------------------------
-    # SORT CONTROLS
-    # --------------------------------------------------------
+    if filter_choice == "Fresh Cross Above EMA20":
+        filtered = filtered[
+            (filtered["Price_EMA20_Last_Cross"] == "CROSS ABOVE") &
+            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+        ]
+    elif filter_choice == "Fresh Cross Below EMA20":
+        filtered = filtered[
+            (filtered["Price_EMA20_Last_Cross"] == "CROSS BELOW") &
+            (filtered["Days_Since_Price_EMA20_Cross"] <= 5)
+        ]
+    elif filter_choice == "Near EMA20":
+        filtered = filtered[filtered["Pct_Above_EMA20"].abs() <= 0.02]
+    elif filter_choice == "Above EMA20":
+        filtered = filtered[filtered["Pct_Above_EMA20"] > 0]
+    elif filter_choice == "Below EMA20":
+        filtered = filtered[filtered["Pct_Above_EMA20"] < 0]
+    elif filter_choice == "Early Entry + Above EMA20":
+        filtered = filtered[
+            (filtered["Early_Rotation_State"] == "EARLY ENTRY") &
+            (filtered["Pct_Above_EMA20"] > 0)
+        ]
+    elif filter_choice == "Emerging + Above EMA20":
+        filtered = filtered[
+            (filtered["Rotation_State"] == "EMERGING") &
+            (filtered["Pct_Above_EMA20"] > 0)
+        ]
+    elif filter_choice == "Leaders Near EMA20":
+        filtered = filtered[
+            (filtered["Rotation_State"] == "LEADER") &
+            (filtered["Pct_Above_EMA20"].abs() <= 0.02)
+        ]
+    elif filter_choice == "EMA20 Above MA30":
+        filtered = filtered[filtered["EMA20_Above_MA30"] == True]
+    elif filter_choice == "Extended Above EMA20":
+        filtered = filtered[filtered["Pct_Above_EMA20"] > 0.08]
 
     sort_options = {
         "Ticker": "Ticker",
@@ -1171,10 +1099,6 @@ elif filter_choice == "Extended Above EMA20":
             na_position="last"
         )
 
-    # --------------------------------------------------------
-    # DISPLAY TABLE
-    # --------------------------------------------------------
-
     radar_cols = [
         c for c in [
             "Ticker",
@@ -1199,9 +1123,7 @@ elif filter_choice == "Extended Above EMA20":
         if c in filtered.columns
     ]
 
-    st.caption(
-        f"Showing {len(filtered)} of {len(radar)} assets."
-    )
+    st.caption(f"Showing {len(filtered)} of {len(radar)} assets.")
 
     display_radar = filtered[radar_cols].copy()
 
@@ -1216,70 +1138,19 @@ elif filter_choice == "Extended Above EMA20":
         hide_index=True,
         height=650,
         column_config={
-            "Ticker": st.column_config.TextColumn(
-                "Ticker",
-                width="small"
-            ),
-
-            "EMA_Signal": st.column_config.TextColumn(
-                "EMA Signal",
-                width="medium"
-            ),
-
-            "Price": st.column_config.NumberColumn(
-                "Price",
-                format="$%.2f"
-            ),
-
-            "EMA20": st.column_config.NumberColumn(
-                "EMA20",
-                format="$%.2f"
-            ),
-
-            "Pct_Above_EMA20": st.column_config.NumberColumn(
-                "% vs EMA20",
-                format="%.1f%%"
-            ),
-
-            "MA30": st.column_config.NumberColumn(
-                "MA30",
-                format="$%.2f"
-            ),
-
-            "MA50": st.column_config.NumberColumn(
-                "MA50",
-                format="$%.2f"
-            ),
-
-            "MA100": st.column_config.NumberColumn(
-                "MA100",
-                format="$%.2f"
-            ),
-
-            "MA200": st.column_config.NumberColumn(
-                "MA200",
-                format="$%.2f"
-            ),
-
-            "EMA20_Slope_5D_Pct": st.column_config.NumberColumn(
-                "EMA20 5D Slope",
-                format="%.2f"
-            ),
-
-            "MA30_Slope_5D_Pct": st.column_config.NumberColumn(
-                "MA30 5D Slope",
-                format="%.2f"
-            ),
-
-            "Early_Rotation_Score": st.column_config.NumberColumn(
-                "Early Score",
-                format="%.1f"
-            ),
-
-            "Rotation_Readiness_Score": st.column_config.NumberColumn(
-                "Readiness",
-                format="%.1f"
-            ),
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "EMA_Signal": st.column_config.TextColumn("EMA Signal", width="medium"),
+            "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
+            "EMA20": st.column_config.NumberColumn("EMA20", format="$%.2f"),
+            "Pct_Above_EMA20": st.column_config.NumberColumn("% vs EMA20", format="%.1f%%"),
+            "MA30": st.column_config.NumberColumn("MA30", format="$%.2f"),
+            "MA50": st.column_config.NumberColumn("MA50", format="$%.2f"),
+            "MA100": st.column_config.NumberColumn("MA100", format="$%.2f"),
+            "MA200": st.column_config.NumberColumn("MA200", format="$%.2f"),
+            "EMA20_Slope_5D_Pct": st.column_config.NumberColumn("EMA20 5D Slope", format="%.2f"),
+            "MA30_Slope_5D_Pct": st.column_config.NumberColumn("MA30 5D Slope", format="%.2f"),
+            "Early_Rotation_Score": st.column_config.NumberColumn("Early Score", format="%.1f"),
+            "Rotation_Readiness_Score": st.column_config.NumberColumn("Readiness", format="%.1f"),
         }
     )
 
@@ -1296,10 +1167,7 @@ elif filter_choice == "Extended Above EMA20":
     ].copy()
 
     recent = recent.sort_values(
-        [
-            "Days_Since_Price_EMA20_Cross",
-            "Pct_Above_EMA20"
-        ],
+        ["Days_Since_Price_EMA20_Cross", "Pct_Above_EMA20"],
         ascending=[True, False]
     )
 
@@ -1333,27 +1201,13 @@ elif filter_choice == "Extended Above EMA20":
         width="stretch",
         hide_index=True,
         column_config={
-            "Price": st.column_config.NumberColumn(
-                "Price",
-                format="$%.2f"
-            ),
-
-            "EMA20": st.column_config.NumberColumn(
-                "EMA20",
-                format="$%.2f"
-            ),
-
-            "Pct_Above_EMA20": st.column_config.NumberColumn(
-                "% vs EMA20",
-                format="%.1f%%"
-            ),
-
-            "Early_Rotation_Score": st.column_config.NumberColumn(
-                "Early Score",
-                format="%.1f"
-            ),
+            "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
+            "EMA20": st.column_config.NumberColumn("EMA20", format="$%.2f"),
+            "Pct_Above_EMA20": st.column_config.NumberColumn("% vs EMA20", format="%.1f%%"),
+            "Early_Rotation_Score": st.column_config.NumberColumn("Early Score", format="%.1f"),
         }
     )
+
 # ============================================================
 # ROTATION DECISION SUPPORT
 # ============================================================
