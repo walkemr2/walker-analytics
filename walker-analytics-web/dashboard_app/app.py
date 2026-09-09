@@ -73,6 +73,7 @@ page = st.sidebar.radio(
     [
         "Command Center",
         "MA / EMA Radar",
+        "Wide Beach",
         "Rotation Decision Support",
         "Asset Explorer",
         "Early Rotation",
@@ -1207,6 +1208,500 @@ elif page == "MA / EMA Radar":
             "Early_Rotation_Score": st.column_config.NumberColumn("Early Score", format="%.1f"),
         }
     )
+
+# ============================================================
+# WIDE BEACH
+# ============================================================
+
+elif page == "Wide Beach":
+
+    st.header("Wide Beach — Historical MA Workbench")
+
+    st.caption(
+        "Historical moving-average workbench built directly from moving_average_wide.csv. "
+        "Use it to narrow the universe, isolate specific moving averages, inspect exact historical "
+        "relationships, and then drill into one asset without losing the full underlying data."
+    )
+
+    wide = ma_wide.copy()
+
+    # --------------------------------------------------------
+    # DATE / UNIVERSE SETUP
+    # --------------------------------------------------------
+
+    wide_date_col = wide.columns[0]
+    wide[wide_date_col] = pd.to_datetime(
+        wide[wide_date_col],
+        errors="coerce"
+    )
+    wide = wide.dropna(subset=[wide_date_col]).sort_values(wide_date_col)
+
+    def infer_wide_tickers(columns):
+        suffixes = [
+            "_EMA20",
+            "_30",
+            "_50",
+            "_100",
+            "_200",
+            "_AboveEMA20",
+            "_Pct_Above_EMA20",
+            "_Above30",
+            "_Pct_Above_30",
+            "_Above50",
+            "_Pct_Above_50",
+            "_Above100",
+            "_Pct_Above_100",
+            "_Above200",
+            "_Pct_Above_200",
+        ]
+
+        tickers_found = []
+
+        for col in columns:
+            if col == wide_date_col:
+                continue
+
+            text_col = str(col)
+
+            if not any(text_col.endswith(suffix) for suffix in suffixes):
+                tickers_found.append(text_col)
+
+        return sorted(set(tickers_found))
+
+    wide_tickers = infer_wide_tickers(wide.columns)
+
+    latest_market_date = wide[wide_date_col].max()
+    earliest_market_date = wide[wide_date_col].min()
+
+    h1, h2, h3 = st.columns(3)
+    h1.metric("Assets Available", len(wide_tickers))
+    h2.metric(
+        "Market Data Through",
+        latest_market_date.strftime("%Y-%m-%d")
+        if pd.notna(latest_market_date)
+        else "N/A"
+    )
+    h3.metric(
+        "History Starts",
+        earliest_market_date.strftime("%Y-%m-%d")
+        if pd.notna(earliest_market_date)
+        else "N/A"
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # PRESETS / TICKER SELECTION
+    # --------------------------------------------------------
+
+    preset_map = {
+        "Technology Complex": ["XLK", "DRAM", "SOXX", "SMH"],
+        "Broad Market": ["SPY", "VOO", "QQQ", "DIA", "IWM", "RSP"],
+        "Energy": ["XLE", "XOP", "OIH", "USO", "PDBC", "AMLP"],
+        "Metals / Commodities": ["GLD", "SLV", "CPER", "COPX", "DBA", "CORN", "WEAT"],
+        "Rates / Defensive": ["TLT", "IEF", "SHY", "TIP", "UUP", "XLU", "XLP"],
+        "Crypto / Alternative": ["IBIT", "ETHE", "UNG", "VIXY"],
+        "Custom": [],
+    }
+
+    c1, c2 = st.columns([1, 3])
+
+    with c1:
+        preset = st.selectbox(
+            "Universe Preset",
+            list(preset_map.keys()),
+            index=0,
+            key="wide_beach_preset"
+        )
+
+    default_tickers = [
+        ticker
+        for ticker in preset_map.get(preset, [])
+        if ticker in wide_tickers
+    ]
+
+    if preset == "Custom":
+        default_tickers = [
+            ticker for ticker in ["SPY", "QQQ"]
+            if ticker in wide_tickers
+        ]
+
+    with c2:
+        selected_tickers = st.multiselect(
+            "Assets",
+            wide_tickers,
+            default=default_tickers,
+            key=f"wide_beach_assets_{preset}"
+        )
+
+    if not selected_tickers:
+        st.info("Select at least one asset to build the historical workbench.")
+        st.stop()
+
+    # --------------------------------------------------------
+    # HISTORY WINDOW / MA LENS
+    # --------------------------------------------------------
+
+    c3, c4, c5 = st.columns([1.2, 1.5, 2.3])
+
+    with c3:
+        history_window = st.selectbox(
+            "History Window",
+            [
+                "Last 30 Trading Days",
+                "Last 60 Trading Days",
+                "Last 120 Trading Days",
+                "Last 252 Trading Days",
+                "All Available History",
+            ],
+            index=2,
+            key="wide_beach_history_window"
+        )
+
+    with c4:
+        view_mode = st.selectbox(
+            "Table View",
+            [
+                "MA Values",
+                "Distance From MAs",
+                "Above / Below Flags",
+                "Full Detail",
+            ],
+            index=0,
+            key="wide_beach_view_mode"
+        )
+
+    with c5:
+        selected_mas = st.multiselect(
+            "Moving-Average Lens",
+            ["EMA20", "MA30", "MA50", "MA100", "MA200"],
+            default=["EMA20", "MA30", "MA50", "MA100", "MA200"],
+            key="wide_beach_ma_lens"
+        )
+
+    window_rows = {
+        "Last 30 Trading Days": 30,
+        "Last 60 Trading Days": 60,
+        "Last 120 Trading Days": 120,
+        "Last 252 Trading Days": 252,
+    }
+
+    if history_window == "All Available History":
+        wide_window = wide.copy()
+    else:
+        wide_window = wide.tail(window_rows[history_window]).copy()
+
+    # --------------------------------------------------------
+    # COLUMN BUILDERS
+    # --------------------------------------------------------
+
+    ma_value_suffix = {
+        "EMA20": "_EMA20",
+        "MA30": "_30",
+        "MA50": "_50",
+        "MA100": "_100",
+        "MA200": "_200",
+    }
+
+    distance_suffix = {
+        "EMA20": "_Pct_Above_EMA20",
+        "MA30": "_Pct_Above_30",
+        "MA50": "_Pct_Above_50",
+        "MA100": "_Pct_Above_100",
+        "MA200": "_Pct_Above_200",
+    }
+
+    flag_suffix = {
+        "EMA20": "_AboveEMA20",
+        "MA30": "_Above30",
+        "MA50": "_Above50",
+        "MA100": "_Above100",
+        "MA200": "_Above200",
+    }
+
+    def build_columns_for_ticker(ticker, mode, ma_lens):
+        cols = [ticker] if ticker in wide.columns else []
+
+        if mode in ["MA Values", "Full Detail"]:
+            for ma_name in ma_lens:
+                col = f"{ticker}{ma_value_suffix[ma_name]}"
+                if col in wide.columns:
+                    cols.append(col)
+
+        if mode in ["Distance From MAs", "Full Detail"]:
+            for ma_name in ma_lens:
+                col = f"{ticker}{distance_suffix[ma_name]}"
+                if col in wide.columns:
+                    cols.append(col)
+
+        if mode in ["Above / Below Flags", "Full Detail"]:
+            for ma_name in ma_lens:
+                col = f"{ticker}{flag_suffix[ma_name]}"
+                if col in wide.columns:
+                    cols.append(col)
+
+        return cols
+
+    selected_cols = [wide_date_col]
+
+    for ticker in selected_tickers:
+        selected_cols.extend(
+            build_columns_for_ticker(
+                ticker,
+                view_mode,
+                selected_mas
+            )
+        )
+
+    # Preserve order while removing duplicates.
+    selected_cols = list(dict.fromkeys(selected_cols))
+
+    # --------------------------------------------------------
+    # HISTORICAL MATRIX
+    # --------------------------------------------------------
+
+    st.subheader("Historical MA Matrix")
+
+    st.caption(
+        f"Showing {len(wide_window):,} trading sessions for "
+        f"{len(selected_tickers)} selected asset(s). "
+        "Horizontal scrolling is intentional in Full Detail mode."
+    )
+
+    matrix = wide_window[selected_cols].copy()
+    matrix[wide_date_col] = matrix[wide_date_col].dt.strftime("%Y-%m-%d")
+
+    column_config = {
+        wide_date_col: st.column_config.TextColumn(
+            "Date",
+            width="small"
+        )
+    }
+
+    for ticker in selected_tickers:
+        if ticker in matrix.columns:
+            column_config[ticker] = st.column_config.NumberColumn(
+                f"{ticker} Price",
+                format="$%.2f"
+            )
+
+        for ma_name in selected_mas:
+            value_col = f"{ticker}{ma_value_suffix[ma_name]}"
+            if value_col in matrix.columns:
+                column_config[value_col] = st.column_config.NumberColumn(
+                    f"{ticker} {ma_name}",
+                    format="$%.2f"
+                )
+
+            pct_col = f"{ticker}{distance_suffix[ma_name]}"
+            if pct_col in matrix.columns:
+                column_config[pct_col] = st.column_config.NumberColumn(
+                    f"{ticker} % vs {ma_name}",
+                    format="%.2f%%"
+                )
+                matrix[pct_col] = pd.to_numeric(
+                    matrix[pct_col],
+                    errors="coerce"
+                ) * 100
+
+            flag_col = f"{ticker}{flag_suffix[ma_name]}"
+            if flag_col in matrix.columns:
+                column_config[flag_col] = st.column_config.TextColumn(
+                    f"{ticker} Above {ma_name}",
+                    width="small"
+                )
+
+    st.dataframe(
+        matrix,
+        width="stretch",
+        hide_index=True,
+        height=520,
+        column_config=column_config
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # EXACT SNAPSHOT BY DATE
+    # --------------------------------------------------------
+
+    st.subheader("Exact MA Snapshot")
+
+    st.caption(
+        "Pick one historical session and compare the selected assets row-by-row. "
+        "This is the fastest way to zero in on the exact MA relationships on a specific date."
+    )
+
+    available_dates = wide_window[wide_date_col].dropna().tolist()
+
+    snapshot_date = st.select_slider(
+        "Historical Session",
+        options=available_dates,
+        value=available_dates[-1],
+        format_func=lambda x: x.strftime("%Y-%m-%d"),
+        key="wide_beach_snapshot_date"
+    )
+
+    snap_row = wide_window.loc[
+        wide_window[wide_date_col] == snapshot_date
+    ].iloc[-1]
+
+    snapshot_rows = []
+
+    for ticker in selected_tickers:
+        item = {
+            "Ticker": ticker,
+            "Price": snap_row.get(ticker),
+        }
+
+        for ma_name in selected_mas:
+            value_col = f"{ticker}{ma_value_suffix[ma_name]}"
+            pct_col = f"{ticker}{distance_suffix[ma_name]}"
+            flag_col = f"{ticker}{flag_suffix[ma_name]}"
+
+            item[ma_name] = snap_row.get(value_col)
+            item[f"% vs {ma_name}"] = (
+                snap_row.get(pct_col) * 100
+                if pd.notna(snap_row.get(pct_col))
+                else None
+            )
+            item[f"Above {ma_name}"] = snap_row.get(flag_col)
+
+        snapshot_rows.append(item)
+
+    exact_snapshot = pd.DataFrame(snapshot_rows)
+
+    exact_column_config = {
+        "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+        "Price": st.column_config.NumberColumn("Price", format="$%.2f"),
+    }
+
+    for ma_name in selected_mas:
+        exact_column_config[ma_name] = st.column_config.NumberColumn(
+            ma_name,
+            format="$%.2f"
+        )
+        exact_column_config[f"% vs {ma_name}"] = st.column_config.NumberColumn(
+            f"% vs {ma_name}",
+            format="%.2f%%"
+        )
+        exact_column_config[f"Above {ma_name}"] = st.column_config.TextColumn(
+            f"Above {ma_name}",
+            width="small"
+        )
+
+    st.dataframe(
+        exact_snapshot,
+        width="stretch",
+        hide_index=True,
+        column_config=exact_column_config
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # SINGLE-ASSET DEEP DIVE
+    # --------------------------------------------------------
+
+    st.subheader("Single-Asset MA Deep Dive")
+
+    deep_ticker = st.selectbox(
+        "Deep-Dive Asset",
+        selected_tickers,
+        index=0,
+        key="wide_beach_deep_ticker"
+    )
+
+    fig_wide = go.Figure()
+
+    if deep_ticker in wide_window.columns:
+        fig_wide.add_trace(
+            go.Scatter(
+                x=wide_window[wide_date_col],
+                y=wide_window[deep_ticker],
+                mode="lines",
+                name="Price",
+                line=dict(width=3)
+            )
+        )
+
+    for ma_name in selected_mas:
+        col = f"{deep_ticker}{ma_value_suffix[ma_name]}"
+
+        if col in wide_window.columns:
+            fig_wide.add_trace(
+                go.Scatter(
+                    x=wide_window[wide_date_col],
+                    y=wide_window[col],
+                    mode="lines",
+                    name=ma_name
+                )
+            )
+
+    fig_wide.update_layout(
+        title=f"{deep_ticker} — Historical Price / MA Structure",
+        xaxis_title="Date",
+        yaxis_title="Price",
+        hovermode="x unified",
+        legend_title="Series"
+    )
+
+    st.plotly_chart(
+        fig_wide,
+        use_container_width=True
+    )
+
+    # --------------------------------------------------------
+    # DISTANCE HISTORY
+    # --------------------------------------------------------
+
+    if selected_mas:
+        st.subheader("Distance From Selected Moving Averages")
+
+        distance_fig = go.Figure()
+
+        for ma_name in selected_mas:
+            pct_col = f"{deep_ticker}{distance_suffix[ma_name]}"
+
+            if pct_col in wide_window.columns:
+                pct_series = pd.to_numeric(
+                    wide_window[pct_col],
+                    errors="coerce"
+                ) * 100
+
+                distance_fig.add_trace(
+                    go.Scatter(
+                        x=wide_window[wide_date_col],
+                        y=pct_series,
+                        mode="lines",
+                        name=f"% vs {ma_name}"
+                    )
+                )
+
+        distance_fig.add_hline(
+            y=0,
+            line_dash="dash",
+            annotation_text="Price = MA"
+        )
+
+        distance_fig.update_layout(
+            title=f"{deep_ticker} — Percent Distance From Moving Averages",
+            xaxis_title="Date",
+            yaxis_title="Percent Distance",
+            hovermode="x unified",
+            legend_title="Series"
+        )
+
+        st.plotly_chart(
+            distance_fig,
+            use_container_width=True
+        )
+
+    st.info(
+        "Wide Beach is intentionally exhaustive. Use presets, the MA lens, and the date controls "
+        "to reduce the 1,000+ raw columns to the exact historical relationships you want to inspect."
+    )
+
 
 # ============================================================
 # ROTATION DECISION SUPPORT
