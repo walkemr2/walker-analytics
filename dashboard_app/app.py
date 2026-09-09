@@ -73,6 +73,7 @@ page = st.sidebar.radio(
     [
         "Command Center",
         "MA / EMA Radar",
+        "Rotation Decision Support",
         "Asset Explorer",
         "Early Rotation",
         "Rotation Analysis",
@@ -1353,6 +1354,303 @@ elif filter_choice == "Extended Above EMA20":
             ),
         }
     )
+# ============================================================
+# ROTATION DECISION SUPPORT
+# ============================================================
+
+elif page == "Rotation Decision Support":
+
+    st.header("Rotation Decision Support")
+
+    st.caption(
+        "Research-to-production decision-support layer combining early EMA20 detection, "
+        "walk-forward ML candidate quality, confirmation, moving-average structure, and "
+        "risk context. States identify opportunities for investigation; they are not "
+        "automatic buy or sell instructions."
+    )
+
+    d = decision.copy()
+
+    # --------------------------------------------------------
+    # CLEANUP / DISPLAY HELPERS
+    # --------------------------------------------------------
+
+    numeric_decision_cols = [
+        "Price", "EMA20", "MA30", "MA50", "MA100", "MA200",
+        "Distance_To_EMA20", "Distance_To_MA50", "Distance_To_MA200",
+        "Days_Since_EMA20_Cross", "ML_Early_Leader_Probability",
+        "ML_Daily_PctRank", "EMA20_Slope_5D_Pct", "MA30_Slope_5D_Pct",
+        "Early_Rotation_Score", "Rotation_Readiness_Score", "Priority_Sort",
+    ]
+
+    for col in numeric_decision_cols:
+        if col in d.columns:
+            d[col] = pd.to_numeric(d[col], errors="coerce")
+
+    def decision_count(state):
+        if "Decision_Support_State" not in d.columns:
+            return 0
+        return int((d["Decision_Support_State"] == state).sum())
+
+    def display_pct_fraction(value, decimals=1):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value * 100:+.{decimals}f}%"
+
+    def display_percentile(value):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value * 100:.1f}th percentile"
+
+    # --------------------------------------------------------
+    # CURRENT OPPORTUNITY PIPELINE
+    # --------------------------------------------------------
+
+    st.subheader("Current Opportunity Pipeline")
+    st.caption(
+        "Lifecycle counts. These states are stages, not grades: Day-0 detection can mature "
+        "into an early/confirmed opportunity, while established leaders are managed separately."
+    )
+
+    p1, p2, p3, p4, p5, p6 = st.columns(6)
+    p1.metric("New Detection", decision_count("▲ NEW DETECTION"))
+    p2.metric("Early Watch", decision_count("▲ EARLY WATCH"))
+    p3.metric("Investigate", decision_count("★ INVESTIGATE"))
+    p4.metric("High Interest", decision_count("★★ HIGH INTEREST"))
+    p5.metric("Established Leader", decision_count("● ESTABLISHED LEADER"))
+    p6.metric("Structural Caution", decision_count("▼ STRUCTURAL CAUTION"))
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # TOP CURRENT OPPORTUNITIES
+    # --------------------------------------------------------
+
+    st.subheader("Top Current Opportunities")
+    st.caption(
+        "Opportunity-side view: detection → ML quality → confirmation → structure. "
+        "ML rank is shown only when the asset is in the model's current early-entry population."
+    )
+
+    opportunity_states = [
+        "★★ HIGH INTEREST",
+        "★ INVESTIGATE",
+        "▲ NEW DETECTION",
+        "▲ EARLY WATCH",
+    ]
+
+    opportunities = d[
+        d["Decision_Support_State"].isin(opportunity_states)
+    ].copy() if "Decision_Support_State" in d.columns else d.head(0).copy()
+
+    if "Priority_Sort" in opportunities.columns:
+        opportunities = opportunities.sort_values(
+            ["Priority_Sort", "ML_Daily_PctRank"],
+            ascending=[True, False],
+            na_position="last"
+        )
+    elif "ML_Daily_PctRank" in opportunities.columns:
+        opportunities = opportunities.sort_values(
+            "ML_Daily_PctRank", ascending=False, na_position="last"
+        )
+
+    opportunity_cols = [
+        c for c in [
+            "Ticker",
+            "Decision_Support_State",
+            "Detection_State",
+            "Signal_Window",
+            "ML_Quality",
+            "ML_Daily_PctRank",
+            "Confirmation_State",
+            "Structure_State",
+            "Early_Rotation_State",
+            "Rotation_State",
+            "Distance_To_MA50",
+        ]
+        if c in opportunities.columns
+    ]
+
+    opportunity_display = opportunities[opportunity_cols].copy()
+
+    if "ML_Daily_PctRank" in opportunity_display.columns:
+        opportunity_display["ML_Daily_PctRank"] = (
+            opportunity_display["ML_Daily_PctRank"] * 100
+        )
+
+    if "Distance_To_MA50" in opportunity_display.columns:
+        opportunity_display["Distance_To_MA50"] = (
+            opportunity_display["Distance_To_MA50"] * 100
+        )
+
+    st.dataframe(
+        opportunity_display,
+        width="stretch",
+        hide_index=True,
+        height=430,
+        column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+            "Detection_State": st.column_config.TextColumn("Detection", width="medium"),
+            "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
+            "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+            "ML_Daily_PctRank": st.column_config.NumberColumn("ML Daily Rank", format="%.1f%%"),
+            "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+            "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
+            "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+        }
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # TICKER FOCUS
+    # --------------------------------------------------------
+
+    st.subheader("Ticker Focus")
+    st.caption(
+        "Select any asset to separate opportunity quality from position-management context."
+    )
+
+    decision_tickers = sorted(d["Ticker"].dropna().astype(str).unique())
+    default_index = decision_tickers.index("DRAM") if "DRAM" in decision_tickers else 0
+
+    focus_ticker = st.selectbox(
+        "Select Ticker",
+        decision_tickers,
+        index=default_index,
+        key="decision_focus_ticker"
+    )
+
+    row = d.loc[d["Ticker"].astype(str) == focus_ticker].iloc[0]
+
+    f1, f2, f3, f4 = st.columns(4)
+    f1.metric("Decision Support", row.get("Decision_Support_State", "N/A"))
+    f2.metric("Signal Window", row.get("Signal_Window", "N/A"))
+    f3.metric("ML Quality", row.get("ML_Quality", "N/A"))
+    f4.metric("ML Daily Rank", display_percentile(row.get("ML_Daily_PctRank")))
+
+    f5, f6, f7, f8 = st.columns(4)
+    f5.metric("Detection", row.get("Detection_State", "N/A"))
+    f6.metric("Confirmation", row.get("Confirmation_State", "N/A"))
+    f7.metric("MA Structure", row.get("Structure_State", "N/A"))
+    f8.metric("Rotation State", row.get("Rotation_State", "N/A"))
+
+    st.markdown("#### Structure and Distance")
+
+    s1, s2, s3, s4 = st.columns(4)
+    price_value = row.get("Price")
+    s1.metric("Price", f"${price_value:.2f}" if pd.notna(price_value) else "N/A")
+    s2.metric("vs EMA20", display_pct_fraction(row.get("Distance_To_EMA20")))
+    s3.metric("vs MA50", display_pct_fraction(row.get("Distance_To_MA50")))
+    s4.metric("vs MA200", display_pct_fraction(row.get("Distance_To_MA200")))
+
+    st.markdown("#### Why It Is Here")
+
+    explanation_lines = [
+        f"**Detection:** {row.get('Detection_State', 'N/A')}",
+        f"**Signal window:** {row.get('Signal_Window', 'N/A')}",
+        f"**ML candidate quality:** {row.get('ML_Quality', 'N/A')} "
+        f"({display_percentile(row.get('ML_Daily_PctRank'))})",
+        f"**Confirmation:** {row.get('Confirmation_State', 'N/A')}",
+        f"**Moving-average structure:** {row.get('Structure_State', 'N/A')}",
+        f"**Early rotation:** {row.get('Early_Rotation_State', 'N/A')}",
+        f"**Confirmed rotation:** {row.get('Rotation_State', 'N/A')}",
+    ]
+
+    for line in explanation_lines:
+        st.markdown(line)
+
+    research_note = row.get("Research_Note")
+    if pd.notna(research_note) and str(research_note).strip():
+        st.info(str(research_note))
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # POSITION / RISK CONTEXT
+    # --------------------------------------------------------
+
+    st.subheader("Position / Risk Context")
+    st.caption(
+        "This section deliberately does not convert candidate quality into an automatic trade. "
+        "Research supports separate entry-quality and position-management decisions."
+    )
+
+    r1, r2 = st.columns(2)
+
+    with r1:
+        st.markdown("#### Structural Risk References")
+        st.write(f"**Initial risk research reference:** {row.get('Initial_Risk_Reference', 'N/A')}")
+        st.write(f"**Long-term structural reference:** {row.get('Long_Term_Structural_Reference', 'N/A')}")
+        st.write(f"**Current distance to MA50:** {display_pct_fraction(row.get('Distance_To_MA50'))}")
+        st.write(f"**Current distance to MA200:** {display_pct_fraction(row.get('Distance_To_MA200'))}")
+
+    with r2:
+        st.markdown("#### Earned Protection")
+        st.write(f"**Framework:** {row.get('Earned_Protection_Framework', 'N/A')}")
+        st.write(f"**Current status:** {row.get('Earned_Protection_Status', 'POSITION DATA REQUIRED')}")
+        st.caption(
+            "MA tier ratchets tighter after it is earned; the active stop reference remains "
+            "the current day's value of that moving average."
+        )
+
+    st.warning(
+        "Decision-support states identify where further investigation is warranted. "
+        "They do not establish position size, order type, or an automatic BUY/SELL instruction."
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # WHOLE-UNIVERSE DECISION TABLE
+    # --------------------------------------------------------
+
+    st.subheader("Whole-Universe Decision View")
+
+    universe_cols = [
+        c for c in [
+            "Ticker",
+            "Decision_Support_State",
+            "Detection_State",
+            "ML_Quality",
+            "ML_Daily_PctRank",
+            "Confirmation_State",
+            "Structure_State",
+            "Early_Rotation_State",
+            "Rotation_State",
+            "Distance_To_MA50",
+            "Distance_To_MA200",
+        ]
+        if c in d.columns
+    ]
+
+    universe_display = d[universe_cols].copy()
+
+    if "Priority_Sort" in d.columns:
+        universe_display["_Priority"] = d["Priority_Sort"].values
+        universe_display = universe_display.sort_values(
+            ["_Priority", "ML_Daily_PctRank"],
+            ascending=[True, False],
+            na_position="last"
+        ).drop(columns=["_Priority"])
+
+    for col in ["ML_Daily_PctRank", "Distance_To_MA50", "Distance_To_MA200"]:
+        if col in universe_display.columns:
+            universe_display[col] = universe_display[col] * 100
+
+    st.dataframe(
+        universe_display,
+        width="stretch",
+        hide_index=True,
+        height=550,
+        column_config={
+            "ML_Daily_PctRank": st.column_config.NumberColumn("ML Daily Rank", format="%.1f%%"),
+            "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+            "Distance_To_MA200": st.column_config.NumberColumn("% vs MA200", format="%.1f%%"),
+        }
+    )
+
 # ============================================================
 # ASSET EXPLORER
 # ============================================================
