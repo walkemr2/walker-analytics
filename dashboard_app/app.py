@@ -78,6 +78,7 @@ page = st.sidebar.radio(
         "Asset Explorer",
         "Early Rotation",
         "Rotation Analysis",
+        "User Guide",
         "Methodology"
     ]
 )
@@ -2635,6 +2636,144 @@ elif page == "Rotation Analysis":
         fig_rotation,
         use_container_width=True
     )
+
+# ============================================================
+# USER GUIDE / DECISION FRAMEWORK
+# ============================================================
+
+elif page == "User Guide":
+
+    st.header("How to Use Walker Analytics")
+
+    st.caption(
+        "A page-by-page operating guide for turning the dashboard into a repeatable decision-support process. "
+        "The system separates early detection, candidate quality, confirmation, trend structure, and position risk "
+        "so that no single score is treated as an automatic trade instruction."
+    )
+
+    st.info(
+        "Daily operating idea: Wide Beach tells you where the universe is moving; Early Rotation detects possible "
+        "new moves; ML helps rank current early opportunities; Rotation Analysis confirms established leadership; "
+        "MA structure and risk rules help manage positions after entry."
+    )
+
+    st.subheader("1. Recommended Daily Workflow")
+
+    workflow = pd.DataFrame([
+        {"Step": 1, "Page": "Command Center", "Question": "What matters today?", "Action": "Start here. Read the market-wide counts and top leaders/emerging/early candidates before drilling down."},
+        {"Step": 2, "Page": "Rotation Decision Support", "Question": "What deserves investigation?", "Action": "Review New Detection, Early Watch, Investigate, and High Interest. Separate opportunity quality from position-management context."},
+        {"Step": 3, "Page": "MA / EMA Radar", "Question": "What is the current technical state?", "Action": "Verify EMA20 event timing, slope, distance from moving averages, and whether broader structure supports the setup."},
+        {"Step": 4, "Page": "Wide Beach", "Question": "What does the MA history look like?", "Action": "Inspect historical price/MA relationships and compare peer groups or exact historical sessions."},
+        {"Step": 5, "Page": "Early Rotation", "Question": "Where may capital be starting to move?", "Action": "Use the faster EMA20/MA30 layer to identify developing candidates before full leadership confirmation."},
+        {"Step": 6, "Page": "Rotation Analysis", "Question": "Where is leadership already established?", "Action": "Use momentum, acceleration, and trend confirmation to distinguish leaders, emerging assets, and weakening assets."},
+        {"Step": 7, "Page": "Asset Explorer", "Question": "What does this specific asset look like?", "Action": "Inspect the individual asset, chart, returns, moving averages, and rotation analytics before making a portfolio decision."},
+    ])
+
+    st.dataframe(workflow, width="stretch", hide_index=True, column_config={
+        "Step": st.column_config.NumberColumn("Step", width="small", format="%d"),
+        "Page": st.column_config.TextColumn("Page", width="medium"),
+        "Question": st.column_config.TextColumn("Question Answered", width="medium"),
+        "Action": st.column_config.TextColumn("How to Use It", width="large"),
+    })
+
+    st.divider()
+
+    st.subheader("2. EMA20 Cross — Which Day Matters?")
+    st.caption(
+        "The research does not identify a magic buy day. It supports a detection-and-confirmation window. "
+        "Day numbers are trading sessions since the bullish price/EMA20 cross."
+    )
+
+    day_guide = pd.DataFrame([
+        {"Day": "Day 0", "Role": "Detection", "Interpretation": "The event just happened. Earliest warning that behavior may be changing.", "Focus": "Notice it; do not treat the cross alone as proof."},
+        {"Day": "Day 1", "Role": "Early confirmation", "Interpretation": "The move survived one session and can begin receiving supporting evidence.", "Focus": "Check slope, ML rank, structure, and rotation evidence."},
+        {"Day": "Day 2", "Role": "Early confirmation", "Interpretation": "More evidence is available without being far removed from the original cross.", "Focus": "Strong candidates deserve investigation."},
+        {"Day": "Day 3", "Role": "Research sweet spot", "Interpretation": "Our opportunity study showed a somewhat stronger Early-Leader rate around this part of the window.", "Focus": "Pay particular attention, but do not create a Day-3 automatic buy rule."},
+        {"Day": "Day 4", "Role": "Late confirmation", "Interpretation": "Still inside the preferred Days 1–4 research window and has more confirmation than Day 0.", "Focus": "Useful when quality remains strong and the asset has not become excessively extended."},
+        {"Day": "Day 5", "Role": "Late early window", "Interpretation": "Still fresh enough to monitor, but the research portfolio rules used Days 1–4 for entries.", "Focus": "Treat as late-stage early evidence rather than the preferred entry window."},
+        {"Day": "Day 6+", "Role": "Established trend", "Interpretation": "The original cross is no longer an early event.", "Focus": "Shift emphasis toward leadership, structure, pullbacks, and position management."},
+    ])
+
+    st.dataframe(day_guide, width="stretch", hide_index=True)
+
+    st.success(
+        "Practical rule: Day 0 says LOOK. Days 1–4 say EVALUATE. Day 3 deserves extra attention from the historical sample, "
+        "but ML quality, confirmation, MA structure, and risk still have to agree."
+    )
+
+    st.divider()
+
+    st.subheader("3. How the Signals Feed the Decision")
+
+    st.markdown(
+        """
+        **Wide Beach / Market Context**  \n        ↓  \n        **EMA20 Detection** — Did something change?  \n        ↓  \n        **Walk-Forward ML Quality Rank** — Among current early opportunities, which historically looked stronger?  \n        ↓  \n        **Days 1–4 Confirmation** — Is the move surviving long enough to gain evidence?  \n        ↓  \n        **MA Structure + Rotation Evidence** — Is the broader trend supportive?  \n        ↓  \n        **Asset / Peer Investigation** — Does the opportunity make sense in its own category and lifecycle?  \n        ↓  \n        **Position / Risk Management** — If capital is committed, how much room should the trend receive and when has tighter protection been earned?
+        """
+    )
+
+    st.warning(
+        "Important: a 95th-percentile ML rank does not mean a 95% chance of success. It means the candidate ranks near the top "
+        "of the model's current opportunity population. Ranking and probability are different concepts."
+    )
+
+    st.divider()
+
+    st.subheader("4. Research Evidence — What the Experiments Actually Told Us")
+    st.caption("These are historical research findings, not promises of future performance.")
+
+    evidence = pd.DataFrame([
+        {"Research": "MA200 baseline", "Finding": "Broad-index timing generally reduced maximum drawdown but usually sacrificed raw buy-and-hold CAGR.", "System Use": "Treat MA200 primarily as a wider structural trend/risk reference."},
+        {"Research": "Distinct entry / MA exits", "Finding": "MA200 captured larger trend tails; faster exits reduced risk but could cut major winners short.", "System Use": "Separate early-entry logic from structural exit logic."},
+        {"Research": "Early-entry opportunity dataset", "Finding": "Day 0 was useful for detection; Days 1–4 provided a useful confirmation window. Early-Leader rates improved modestly after Day 0.", "System Use": "Detect first, then evaluate confirmation rather than waiting for mature leadership."},
+        {"Research": "Walk-forward Early-Leader ML", "Finding": "Random Forest achieved about 0.67 out-of-sample AUC; top-ranked opportunities had materially higher Early-Leader success than the base population.", "System Use": "Use ML as a quality/ranking layer, not as an automatic trading engine."},
+        {"Research": "ML rotation portfolio", "Finding": "ML found major winners, but MA200-only management across the whole universe was too blunt and did not beat SPY on CAGR.", "System Use": "Candidate selection alone is insufficient; position management and portfolio construction matter."},
+        {"Research": "Earned progressive protection", "Finding": "Top1 earned protection improved materially versus its MA200 baseline, while diversified portfolios showed a return/drawdown tradeoff.", "System Use": "Allow a trade room initially, then tighten the MA tier only after the trade earns it."},
+        {"Research": "Top5 + MA50 initial risk", "Finding": "In the tested sample, Top5 MA50 + earned protection produced about 12.3% CAGR, -25.0% max drawdown, and ~0.49 Calmar versus SPY ~13.8%, -33.7%, and ~0.41.", "System Use": "MA50 is a promising diversified failure-control reference, not a universal stop for every portfolio."},
+        {"Research": "Slot-aware recycling audit", "Finding": "Replacement assets did not systematically outperform simply continuing to hold the exited asset; mean and median rotation edge were slightly negative.", "System Use": "Do not claim rotation-to-the-next-candidate creates proven alpha. The demonstrated Top5 benefit is better explained by loss containment and diversification."},
+    ])
+
+    st.dataframe(evidence, width="stretch", hide_index=True, height=430)
+
+    st.markdown(
+        """
+        **Current research-backed architecture**
+
+        **Detection → Quality / Ranking → Confirmation → Structural Risk → Earned Profit Protection → Portfolio Construction**
+
+        - **EMA20:** early detection.
+        - **Days 1–4:** preferred confirmation window used in the portfolio research.
+        - **Random Forest Daily Rank:** candidate-quality filter among current early opportunities.
+        - **MA50:** promising initial failure-control reference in the diversified Top5 research.
+        - **MA200:** wider structural boundary and long-term trend context.
+        - **Earned protection:** +5% peak → MA100; +10% → MA50; +20% → MA30. The MA tier ratchets; the stop value remains the current day's moving average.
+        - **Diversification:** a major portfolio-level risk-control mechanism.
+        """
+    )
+
+    st.divider()
+
+    st.subheader("5. What Should Flow Up to the Command Center?")
+    st.caption(
+        "The Command Center should eventually summarize the lower-level pages rather than forcing the user to inspect every table every morning."
+    )
+
+    command_center_plan = pd.DataFrame([
+        {"Lower-Level Source": "Wide Beach / MA Radar", "Command-Center Takeaway": "Breadth: how much of the universe is above/below key trend references and whether structure is improving or deteriorating."},
+        {"Lower-Level Source": "Rotation Decision Support", "Command-Center Takeaway": "Top New Detection, Investigate, High Interest, and structural-caution names."},
+        {"Lower-Level Source": "Early Rotation", "Command-Center Takeaway": "Best developing early opportunities and how many are entering the Days 1–4 confirmation window."},
+        {"Lower-Level Source": "ML layer", "Command-Center Takeaway": "Highest current Daily_Model_PctRank candidates, with signal date and lifecycle day clearly shown."},
+        {"Lower-Level Source": "Rotation Analysis", "Command-Center Takeaway": "Current leaders, emerging leadership, and weakening leadership."},
+        {"Lower-Level Source": "Position / Risk", "Command-Center Takeaway": "Future: held positions approaching structural stops, earned-protection milestones, or deterioration states."},
+    ])
+
+    st.dataframe(command_center_plan, width="stretch", hide_index=True)
+
+    st.info(
+        "Next build step: upgrade Command Center so these lower-level takeaways are surfaced automatically. "
+        "After that, category hierarchy can prevent unlike assets — for example XLK, DRAM, and an individual semiconductor stock — "
+        "from competing as though they occupy the same level of the capital-rotation tree."
+    )
+
 
 # ============================================================
 # METHODOLOGY
