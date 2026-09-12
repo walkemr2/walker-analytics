@@ -35,6 +35,7 @@ MA_WIDE_FILE = DATA_DIR / "moving_average_wide.csv"
 MA_RADAR_FILE = DATA_DIR / "web_ma_wide_snapshot.csv"
 DECISION_FILE = DATA_DIR / "web_rotation_decision_snapshot.csv"
 REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
+HIERARCHY_FILE = DATA_DIR / "asset_hierarchy.csv"
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -72,6 +73,7 @@ page = st.sidebar.radio(
     "Navigation",
     [
         "Command Center",
+        "Market Map",
         "MA / EMA Radar",
         "Wide Beach",
         "Rotation Decision Support",
@@ -698,6 +700,478 @@ if page == "Command Center":
     st.success(
         "Command Center principle: summarize lower-level evidence; do not create a new mystery score. "
         "When something looks important here, drill down to the page that produced the conclusion."
+    )
+
+
+# ============================================================
+# HIERARCHICAL MARKET MAP
+# ============================================================
+
+elif page == "Market Map":
+
+    st.header("Hierarchical Market Map")
+
+    st.caption(
+        "Read-only hierarchy view for understanding where an instrument sits in the market. "
+        "This page does not change scoring or make XLK, DRAM, SOXX, SMH, commodities, bonds, and individual securities compete as if they were equivalent."
+    )
+
+    if not HIERARCHY_FILE.exists():
+        st.error(
+            "asset_hierarchy.csv was not found in data_processed. "
+            "Run scripts\\36a_build_asset_hierarchy.py before using this page."
+        )
+        st.stop()
+
+    hierarchy = pd.read_csv(HIERARCHY_FILE)
+
+    required_hierarchy_cols = [
+        "Ticker",
+        "Asset_Class",
+        "Sector",
+        "Industry_Theme",
+        "Instrument_Form",
+        "Instrument_Type",
+        "Peer_Group",
+        "Hierarchy_Level",
+    ]
+
+    missing_hierarchy_cols = [
+        col for col in required_hierarchy_cols
+        if col not in hierarchy.columns
+    ]
+
+    if missing_hierarchy_cols:
+        st.error(
+            "asset_hierarchy.csv is missing required columns: "
+            + ", ".join(missing_hierarchy_cols)
+        )
+        st.stop()
+
+    hierarchy["Ticker"] = (
+        hierarchy["Ticker"]
+        .astype(str)
+        .str.upper()
+        .str.strip()
+    )
+
+    h = hierarchy.copy()
+
+    d_map = decision.copy()
+    d_map["Ticker"] = d_map["Ticker"].astype(str).str.upper().str.strip()
+
+    r_map = rotation.copy()
+    r_map["Ticker"] = r_map["Ticker"].astype(str).str.upper().str.strip()
+
+    e_map = early.copy()
+    e_map["Ticker"] = e_map["Ticker"].astype(str).str.upper().str.strip()
+
+    m_map = ma_radar.copy()
+    m_map["Ticker"] = m_map["Ticker"].astype(str).str.upper().str.strip()
+
+    for df in [d_map, r_map, e_map, m_map]:
+        for col in [
+            "ML_Daily_PctRank",
+            "Distance_To_MA50",
+            "Distance_To_MA200",
+            "Price",
+            "EMA20",
+            "MA30",
+            "MA50",
+            "MA100",
+            "MA200",
+            "Pct_Above_EMA20",
+            "Days_Since_Price_EMA20_Cross",
+        ]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+
+    # --------------------------------------------------------
+    # OVERVIEW
+    # --------------------------------------------------------
+
+    st.subheader("1. Hierarchy Overview")
+
+    c1, c2, c3, c4 = st.columns(4)
+
+    c1.metric("Mapped Assets", h["Ticker"].nunique())
+    c2.metric("Asset Classes", h["Asset_Class"].nunique())
+    c3.metric("Sectors / Major Groups", h["Sector"].nunique())
+    c4.metric("Peer Groups", h["Peer_Group"].nunique())
+
+    st.info(
+        "Hierarchy rule: compare instruments to appropriate peers first, then use the hierarchy to understand how lower-level strength supports or contradicts higher-level flow."
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # HIERARCHICAL FILTERS
+    # --------------------------------------------------------
+
+    st.subheader("2. Navigate the Market Hierarchy")
+
+    f1, f2, f3, f4 = st.columns(4)
+
+    asset_classes = ["All"] + sorted(h["Asset_Class"].dropna().unique().tolist())
+
+    selected_asset_class = f1.selectbox(
+        "Asset Class",
+        asset_classes,
+        index=0,
+        key="market_map_asset_class"
+    )
+
+    h1 = h.copy()
+    if selected_asset_class != "All":
+        h1 = h1[h1["Asset_Class"] == selected_asset_class]
+
+    sectors = ["All"] + sorted(h1["Sector"].dropna().unique().tolist())
+
+    selected_sector = f2.selectbox(
+        "Sector / Major Group",
+        sectors,
+        index=0,
+        key="market_map_sector"
+    )
+
+    h2 = h1.copy()
+    if selected_sector != "All":
+        h2 = h2[h2["Sector"] == selected_sector]
+
+    peer_groups = ["All"] + sorted(h2["Peer_Group"].dropna().unique().tolist())
+
+    selected_peer_group = f3.selectbox(
+        "Peer Group",
+        peer_groups,
+        index=0,
+        key="market_map_peer_group"
+    )
+
+    h3 = h2.copy()
+    if selected_peer_group != "All":
+        h3 = h3[h3["Peer_Group"] == selected_peer_group]
+
+    ticker_options = sorted(h3["Ticker"].dropna().unique().tolist())
+
+    selected_ticker = f4.selectbox(
+        "Instrument",
+        ticker_options if ticker_options else ["N/A"],
+        index=0,
+        key="market_map_ticker"
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # CURRENT GROUP SNAPSHOT
+    # --------------------------------------------------------
+
+    st.subheader("3. Current Group Snapshot")
+
+    group = h3.copy()
+
+    group = group.merge(
+        d_map[
+            [
+                c for c in [
+                    "Ticker",
+                    "Decision_Support_State",
+                    "Signal_Window",
+                    "ML_Quality",
+                    "ML_Daily_PctRank",
+                    "Confirmation_State",
+                    "Structure_State",
+                ]
+                if c in d_map.columns
+            ]
+        ],
+        on="Ticker",
+        how="left"
+    )
+
+    group = group.merge(
+        r_map[
+            [
+                c for c in [
+                    "Ticker",
+                    "Rotation_State",
+                    "Momentum_Score",
+                    "Acceleration_Score",
+                    "Trend_Score",
+                ]
+                if c in r_map.columns
+            ]
+        ],
+        on="Ticker",
+        how="left"
+    )
+
+    group = group.merge(
+        e_map[
+            [
+                c for c in [
+                    "Ticker",
+                    "Early_Rotation_State",
+                    "Early_Rotation_Score",
+                ]
+                if c in e_map.columns
+            ]
+        ],
+        on="Ticker",
+        how="left"
+    )
+
+    group_cols = [
+        c for c in [
+            "Ticker",
+            "Hierarchy_Level",
+            "Asset_Class",
+            "Sector",
+            "Industry_Theme",
+            "Peer_Group",
+            "Instrument_Type",
+            "Decision_Support_State",
+            "Signal_Window",
+            "ML_Quality",
+            "ML_Daily_PctRank",
+            "Confirmation_State",
+            "Structure_State",
+            "Early_Rotation_State",
+            "Rotation_State",
+        ]
+        if c in group.columns
+    ]
+
+    group_view = group[group_cols].copy()
+
+    if "ML_Daily_PctRank" in group_view.columns:
+        group_view["ML_Daily_PctRank"] = (
+            pd.to_numeric(group_view["ML_Daily_PctRank"], errors="coerce") * 100
+        )
+
+    st.dataframe(
+        group_view,
+        width="stretch",
+        hide_index=True,
+        height=min(520, 85 + 34 * max(len(group_view), 1)),
+        column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "Hierarchy_Level": st.column_config.TextColumn("Level", width="small"),
+            "Asset_Class": st.column_config.TextColumn("Asset Class", width="medium"),
+            "Sector": st.column_config.TextColumn("Sector", width="medium"),
+            "Industry_Theme": st.column_config.TextColumn("Industry / Theme", width="medium"),
+            "Peer_Group": st.column_config.TextColumn("Peer Group", width="medium"),
+            "Instrument_Type": st.column_config.TextColumn("Instrument Type", width="medium"),
+            "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+            "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
+            "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+            "ML_Daily_PctRank": st.column_config.NumberColumn("ML Rank", format="%.1f%%"),
+            "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+            "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
+            "Early_Rotation_State": st.column_config.TextColumn("Early Rotation", width="medium"),
+            "Rotation_State": st.column_config.TextColumn("Rotation State", width="small"),
+        }
+    )
+
+    st.caption(
+        "This table intentionally shows existing Walker Analytics evidence side-by-side. "
+        "No hierarchy score is being calculated yet."
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # SELECTED ASSET PATH
+    # --------------------------------------------------------
+
+    st.subheader("4. Selected Instrument — Hierarchy Path")
+
+    selected_row = h[h["Ticker"] == selected_ticker]
+
+    if selected_row.empty:
+        st.info("No hierarchy record is available for the selected instrument.")
+    else:
+        selected_row = selected_row.iloc[0]
+
+        path_text = (
+            f"{selected_row['Asset_Class']}  →  "
+            f"{selected_row['Sector']}  →  "
+            f"{selected_row['Industry_Theme']}  →  "
+            f"{selected_row['Ticker']}"
+        )
+
+        st.success(path_text)
+
+        p1, p2, p3, p4 = st.columns(4)
+
+        p1.metric("Hierarchy Level", selected_row["Hierarchy_Level"])
+        p2.metric("Instrument Type", selected_row["Instrument_Type"])
+        p3.metric("Peer Group", selected_row["Peer_Group"])
+        p4.metric("Instrument Form", selected_row["Instrument_Form"])
+
+        st.caption(
+            "Interpretation: the selected instrument should primarily be compared with instruments serving a similar market role. "
+            "The hierarchy is then used to ask whether broader and narrower levels agree."
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # SELECTED ASSET CURRENT EVIDENCE
+    # --------------------------------------------------------
+
+    st.subheader("5. Selected Instrument — Current Walker Evidence")
+
+    selected_decision = d_map[d_map["Ticker"] == selected_ticker]
+    selected_ma = m_map[m_map["Ticker"] == selected_ticker]
+
+    if selected_decision.empty:
+        st.info("No current Rotation Decision Support record is available for this instrument.")
+    else:
+        row = selected_decision.iloc[-1]
+
+        e1, e2, e3, e4 = st.columns(4)
+
+        e1.metric(
+            "Decision Support",
+            row.get("Decision_Support_State", "N/A")
+        )
+        e2.metric(
+            "Signal Window",
+            row.get("Signal_Window", "N/A")
+        )
+        e3.metric(
+            "Confirmation",
+            row.get("Confirmation_State", "N/A")
+        )
+        e4.metric(
+            "MA Structure",
+            row.get("Structure_State", "N/A")
+        )
+
+        e5, e6, e7, e8 = st.columns(4)
+
+        e5.metric(
+            "ML Quality",
+            row.get("ML_Quality", "N/A")
+        )
+
+        ml_rank = row.get("ML_Daily_PctRank")
+        if pd.notna(ml_rank):
+            e6.metric("ML Daily Rank", f"{float(ml_rank) * 100:.1f}%")
+        else:
+            e6.metric("ML Daily Rank", "N/A")
+
+        e7.metric(
+            "Early Rotation",
+            row.get("Early_Rotation_State", "N/A")
+        )
+        e8.metric(
+            "Rotation State",
+            row.get("Rotation_State", "N/A")
+        )
+
+    if not selected_ma.empty:
+        ma_row = selected_ma.iloc[-1]
+
+        st.markdown("#### Moving-Average Context")
+
+        m1, m2, m3, m4, m5 = st.columns(5)
+
+        def market_map_price(value):
+            if pd.isna(value):
+                return "N/A"
+            return f"${float(value):,.2f}"
+
+        m1.metric("Price", market_map_price(ma_row.get("Price")))
+        m2.metric("EMA20", market_map_price(ma_row.get("EMA20")))
+        m3.metric("MA50", market_map_price(ma_row.get("MA50")))
+        m4.metric("MA100", market_map_price(ma_row.get("MA100")))
+        m5.metric("MA200", market_map_price(ma_row.get("MA200")))
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # PEER GROUP COMPOSITION
+    # --------------------------------------------------------
+
+    st.subheader("6. Peer Group Composition")
+
+    if not selected_row.empty:
+        peer_name = selected_row["Peer_Group"]
+
+        peer_members = h[h["Peer_Group"] == peer_name].copy()
+
+        st.write(
+            f"**{peer_name}** currently contains **{len(peer_members)}** mapped instrument(s)."
+        )
+
+        peer_cols = [
+            "Ticker",
+            "Hierarchy_Level",
+            "Sector",
+            "Industry_Theme",
+            "Instrument_Type",
+        ]
+
+        st.dataframe(
+            peer_members[peer_cols],
+            width="stretch",
+            hide_index=True
+        )
+
+        if len(peer_members) == 1:
+            st.warning(
+                "This peer group currently has only one tracked instrument. "
+                "Do not manufacture a peer comparison from unrelated assets. "
+                "The group will become more useful as the universe expands."
+            )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # DESIGN RULES / NEXT PHASE
+    # --------------------------------------------------------
+
+    st.subheader("7. How to Read the Hierarchy")
+
+    hierarchy_rules = pd.DataFrame([
+        {
+            "Rule": "Compare within role first",
+            "Meaning": "Sector ETFs should primarily be compared with sectors; industry/theme ETFs with similar industries/themes; individual securities with securities or holdings."
+        },
+        {
+            "Rule": "Then move vertically",
+            "Meaning": "Ask whether broad-market, sector, industry/theme, and security-level evidence agree or contradict one another."
+        },
+        {
+            "Rule": "Do not average every level together",
+            "Meaning": "XLK, DRAM, and a future MU position answer different questions and should not be collapsed into one flat leaderboard."
+        },
+        {
+            "Rule": "Breadth comes later",
+            "Meaning": "Future holdings data can show whether ETF strength is broad or driven by only a few major constituents."
+        },
+        {
+            "Rule": "No hierarchy score yet",
+            "Meaning": "Phase 36B is diagnostic. Existing Walker signals remain unchanged until the hierarchy has been inspected and validated."
+        },
+    ])
+
+    st.dataframe(
+        hierarchy_rules,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Rule": st.column_config.TextColumn("Rule", width="medium"),
+            "Meaning": st.column_config.TextColumn("Meaning", width="large"),
+        }
+    )
+
+    st.info(
+        "Phase 36B goal: make market relationships visible before changing the mathematics. "
+        "The next research question is how much broader-level confirmation should influence lower-level opportunity ranking."
     )
 
 
