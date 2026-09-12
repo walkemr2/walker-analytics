@@ -79,6 +79,7 @@ page = st.sidebar.radio(
         "Early Rotation",
         "Rotation Analysis",
         "User Guide",
+        "Research Evidence",
         "Methodology"
     ]
 )
@@ -2772,6 +2773,401 @@ elif page == "User Guide":
         "Next build step: upgrade Command Center so these lower-level takeaways are surfaced automatically. "
         "After that, category hierarchy can prevent unlike assets — for example XLK, DRAM, and an individual semiconductor stock — "
         "from competing as though they occupy the same level of the capital-rotation tree."
+    )
+
+
+# ============================================================
+# RESEARCH EVIDENCE
+# ============================================================
+
+elif page == "Research Evidence":
+
+    st.header("Research Evidence & Findings")
+
+    st.caption(
+        "Validated research findings that explain why Walker Analytics behaves the way it does. "
+        "This page summarizes the historical ML, backtesting, stop-management, portfolio, and audit work. "
+        "Research findings are evidence for decision support—not guarantees of future performance."
+    )
+
+    st.info(
+        "Core research architecture: Detection → ML Quality → Confirmation → "
+        "Structure → Risk Management → Portfolio Construction. "
+        "The research repeatedly showed that one score or one moving average should not do every job."
+    )
+
+    st.subheader("1. Executive Findings")
+
+    findings = pd.DataFrame([
+        {
+            "Decision Question": "When should a new move first be noticed?",
+            "Research Finding": "EMA20 crosses provided useful early detection before slower structure fully developed.",
+            "Walker Implementation": "Day 0 = detection. Do not treat the cross alone as proof."
+        },
+        {
+            "Decision Question": "When should an early setup be investigated?",
+            "Research Finding": "Days 1–4 formed the preferred confirmation window. Day 3 had the strongest Early-Leader rate in the simple day-age comparison, but only by a small margin.",
+            "Walker Implementation": "Days 1–4 = evaluate. Day 3 deserves extra attention, not an automatic buy."
+        },
+        {
+            "Decision Question": "Which early candidates deserve more attention?",
+            "Research Finding": "Walk-forward Random Forest ranking separated higher-quality early opportunities from the baseline population.",
+            "Walker Implementation": "Use ML percentile rank as a candidate-quality filter, not a trade instruction."
+        },
+        {
+            "Decision Question": "Should long moving averages be required for discovery?",
+            "Research Finding": "Long-MA structure contributed relatively little to early-leader identification compared with shorter-term behavior, momentum, volatility, and relative strength.",
+            "Walker Implementation": "Do not reject a young or early asset simply because MA100/MA200 are unavailable or not yet mature."
+        },
+        {
+            "Decision Question": "What does MA200 do well?",
+            "Research Finding": "MA200 often reduced drawdown and preserved long trends, but frequently sacrificed raw CAGR versus buy-and-hold.",
+            "Walker Implementation": "Treat MA200 primarily as a wider structural trend/risk reference, not as the main discovery signal."
+        },
+        {
+            "Decision Question": "Should protection tighten immediately?",
+            "Research Finding": "Aggressive confirmation-based tightening often truncated winners.",
+            "Walker Implementation": "Do not immediately jump to a tight MA simply because a trade is working."
+        },
+        {
+            "Decision Question": "When should protection tighten?",
+            "Research Finding": "Earned progressive protection improved several portfolio configurations, especially concentrated Top1 performance.",
+            "Walker Implementation": "Tighten only after the trade earns it; the MA tier can ratchet tighter while the MA dollar value remains dynamic."
+        },
+        {
+            "Decision Question": "Does diversification matter?",
+            "Research Finding": "Top1, Top3, and Top5 portfolios produced very different return/drawdown frontiers.",
+            "Walker Implementation": "Portfolio construction itself is a risk-control decision."
+        },
+        {
+            "Decision Question": "Does selling an asset automatically create superior replacement alpha?",
+            "Research Finding": "No. Slot-aware Script 31A found mean rotation edge about -0.44%, median about -0.28%, and only about 44.6% of replacements beat the exited-asset counterfactual.",
+            "Walker Implementation": "Do not claim 'sell A and buy B' simply because B ranks higher."
+        },
+    ])
+
+    st.dataframe(
+        findings,
+        width="stretch",
+        hide_index=True,
+        height=500,
+        column_config={
+            "Decision Question": st.column_config.TextColumn("Decision Question", width="medium"),
+            "Research Finding": st.column_config.TextColumn("Research Finding", width="large"),
+            "Walker Implementation": st.column_config.TextColumn("Walker Implementation", width="large"),
+        }
+    )
+
+    st.divider()
+
+    st.subheader("2. Entry & Detection Evidence")
+
+    st.markdown(
+        """
+        **Why EMA20?**
+
+        EMA20 reacts faster than the longer moving averages and therefore works well as an early-event detector.
+        The project does not treat EMA20 as a complete entry system by itself. Instead, an EMA20 cross opens an
+        investigation window.
+
+        **Trading-session age matters.**
+
+        Walker Analytics counts trading sessions, not calendar days. The bullish cross session is Day 0.
+        """
+    )
+
+    day_evidence = pd.DataFrame([
+        {"EMA20 Day": "Day 0", "Early-Leader Rate": 13.1, "Interpretation": "Detection only. Earliest warning."},
+        {"EMA20 Day": "Day 1", "Early-Leader Rate": 13.8, "Interpretation": "First confirmation session."},
+        {"EMA20 Day": "Day 2", "Early-Leader Rate": 14.1, "Interpretation": "More evidence; still close to the event."},
+        {"EMA20 Day": "Day 3", "Early-Leader Rate": 14.7, "Interpretation": "Highest simple day-age rate in the sample."},
+        {"EMA20 Day": "Day 4", "Early-Leader Rate": 14.5, "Interpretation": "Still inside preferred confirmation window."},
+        {"EMA20 Day": "Day 5", "Early-Leader Rate": 14.5, "Interpretation": "Late early window; research portfolios used Days 1–4."},
+    ])
+
+    st.dataframe(
+        day_evidence,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "EMA20 Day": st.column_config.TextColumn("EMA20 Day", width="small"),
+            "Early-Leader Rate": st.column_config.NumberColumn(
+                "Early-Leader Rate",
+                format="%.1f%%"
+            ),
+            "Interpretation": st.column_config.TextColumn("Interpretation", width="large"),
+        }
+    )
+
+    st.success(
+        "Operational takeaway: Day 0 says LOOK. Days 1–4 say EVALUATE. "
+        "Day 3 deserves extra attention from the historical sample, but the evidence does not justify a Day-3 automatic-buy rule."
+    )
+
+    st.divider()
+
+    st.subheader("3. Machine-Learning Evidence")
+
+    ml_summary = pd.DataFrame([
+        {
+            "Model": "Logistic Regression",
+            "Out-of-Sample AUC": 0.653,
+            "Top-Decile Success": 27.3,
+            "Base Success Rate": 14.94,
+            "Interpretation": "Useful ranking lift with a simple, interpretable linear model."
+        },
+        {
+            "Model": "Random Forest",
+            "Out-of-Sample AUC": 0.667,
+            "Top-Decile Success": 26.2,
+            "Base Success Rate": 14.94,
+            "Interpretation": "Best overall discrimination in the walk-forward tests; adopted as the main candidate-quality rank."
+        },
+    ])
+
+    st.dataframe(
+        ml_summary,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Out-of-Sample AUC": st.column_config.NumberColumn("OOS AUC", format="%.3f"),
+            "Top-Decile Success": st.column_config.NumberColumn("Top-Decile Success", format="%.1f%%"),
+            "Base Success Rate": st.column_config.NumberColumn("Base Success Rate", format="%.2f%%"),
+        }
+    )
+
+    st.markdown(
+        """
+        **What the model learned from**
+
+        Important inputs included volatility, drawdowns, short-term relative strength versus SPY, short-term returns,
+        momentum acceleration, distance from EMA20, and moving-average slopes.
+
+        **What it did not prove**
+
+        A high percentile does not mean the asset will win. It means that among historically similar early-entry
+        opportunities, the setup ranked more favorably. ML quality is therefore shown separately from detection,
+        confirmation, structure, and position-management context.
+        """
+    )
+
+    st.warning(
+        "The production dashboard may display an ML signal date older than the current market date. "
+        "That is intentional when the model last scored the asset during its early-entry event. "
+        "The market lifecycle continues to advance independently."
+    )
+
+    st.divider()
+
+    st.subheader("4. Stop & Risk-Management Evidence")
+
+    stop_findings = pd.DataFrame([
+        {
+            "Finding": "MA200 as a structural exit",
+            "Evidence": "Broad indices generally gave up some CAGR versus buy-and-hold but materially reduced maximum drawdown.",
+            "Implication": "MA200 is useful as a wide structural trend reference."
+        },
+        {
+            "Finding": "Fast exits",
+            "Evidence": "EMA20/MA30 exits controlled risk more tightly but often cut off the right tail of large trend winners.",
+            "Implication": "The fastest MA is not automatically the best wealth-building stop."
+        },
+        {
+            "Finding": "Progressive-confirm tightening",
+            "Evidence": "Tightening simply because confirmation improved was often too aggressive.",
+            "Implication": "Retire the idea of automatically stepping 200→100→50→30 based only on confirmation."
+        },
+        {
+            "Finding": "Earned progressive protection",
+            "Evidence": "Milestone-based tightening improved several portfolio configurations.",
+            "Implication": "Current framework: +5% peak→MA100, +10%→MA50, +20%→MA30."
+        },
+        {
+            "Finding": "Dynamic MA semantics",
+            "Evidence": "Audit 30B found that freezing/ratcheting the dollar price of an MA stop produced false exits.",
+            "Implication": "The MA tier ratchets; the active stop reference is today's value of that MA."
+        },
+        {
+            "Finding": "MA50 in diversified Top5",
+            "Evidence": "Top5 MA50 Initial + Earned produced 12.31% CAGR, -24.99% max drawdown, and 0.492 Calmar in the research sample.",
+            "Implication": "MA50 may be useful as a diversified initial failure-control reference; it is not a universal single-position rule."
+        },
+    ])
+
+    st.dataframe(
+        stop_findings,
+        width="stretch",
+        hide_index=True,
+        height=430,
+        column_config={
+            "Finding": st.column_config.TextColumn("Finding", width="medium"),
+            "Evidence": st.column_config.TextColumn("Evidence", width="large"),
+            "Implication": st.column_config.TextColumn("Implication", width="large"),
+        }
+    )
+
+    st.divider()
+
+    st.subheader("5. Portfolio Evidence")
+
+    portfolio_summary = pd.DataFrame([
+        {
+            "Configuration": "SPY Buy & Hold Benchmark",
+            "Ending Wealth": 453886,
+            "CAGR": 13.84,
+            "Max Drawdown": -33.72,
+            "Calmar": 0.410,
+            "Research Read": "Benchmark"
+        },
+        {
+            "Configuration": "Top1 + MA200 + Earned",
+            "Ending Wealth": 552243,
+            "CAGR": 15.77,
+            "Max Drawdown": -45.81,
+            "Calmar": 0.344,
+            "Research Read": "Higher return, materially worse drawdown"
+        },
+        {
+            "Configuration": "Top3 + MA200 + Earned",
+            "Ending Wealth": 413758,
+            "CAGR": 12.94,
+            "Max Drawdown": -35.02,
+            "Calmar": 0.369,
+            "Research Read": "Middle of the frontier"
+        },
+        {
+            "Configuration": "Top5 + MA200 + Earned",
+            "Ending Wealth": 335991,
+            "CAGR": 10.94,
+            "Max Drawdown": -27.11,
+            "Calmar": 0.404,
+            "Research Read": "Lower return, improved drawdown"
+        },
+        {
+            "Configuration": "Top5 + MA50 Initial + Earned",
+            "Ending Wealth": 387487,
+            "CAGR": 12.31,
+            "Max Drawdown": -24.99,
+            "Calmar": 0.492,
+            "Research Read": "Best risk-adjusted Top5 result in this branch"
+        },
+    ])
+
+    st.dataframe(
+        portfolio_summary,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Ending Wealth": st.column_config.NumberColumn("Ending Wealth", format="$%d"),
+            "CAGR": st.column_config.NumberColumn("CAGR", format="%.2f%%"),
+            "Max Drawdown": st.column_config.NumberColumn("Max Drawdown", format="%.2f%%"),
+            "Calmar": st.column_config.NumberColumn("Calmar", format="%.3f"),
+        }
+    )
+
+    st.info(
+        "Portfolio construction changed the risk/return frontier substantially. "
+        "Top1 concentrated upside but suffered larger drawdowns; Top5 diversified failure risk but diluted some return. "
+        "This is why Walker Analytics should eventually separate candidate quality from portfolio-allocation logic."
+    )
+
+    st.divider()
+
+    st.subheader("6. Rejected or Modified Hypotheses")
+
+    rejected = pd.DataFrame([
+        {
+            "Hypothesis": "The next ranked candidate usually creates positive capital-recycling alpha after an MA50 exit.",
+            "Result": "NOT SUPPORTED",
+            "Evidence": "Script 31A: 130 unique replacement events; mean rotation edge -0.44%, median -0.28%, only 44.6% positive.",
+            "What Changed": "Walker no longer treats a higher-ranked replacement as mathematically superior to continuing to hold the exited asset."
+        },
+        {
+            "Hypothesis": "A tighter progressive stop should activate as confirmation improves.",
+            "Result": "MODIFIED",
+            "Evidence": "Progressive-confirm variants often truncated winners and performed poorly in concentrated portfolios.",
+            "What Changed": "Protection is now earned through profit milestones rather than confirmation alone."
+        },
+        {
+            "Hypothesis": "One moving-average stop family should be best for all assets and portfolio structures.",
+            "Result": "NOT SUPPORTED",
+            "Evidence": "Stop-family dominance was mixed; MA200 often won return, EMA20 often won risk, progressive often won consistency.",
+            "What Changed": "Walker separates structural invalidation, profit protection, and portfolio construction."
+        },
+        {
+            "Hypothesis": "A model with a high-confidence prediction can function as a direct trade rule.",
+            "Result": "NOT SUPPORTED",
+            "Evidence": "Walk-forward lift existed, but year-to-year stability and portfolio performance were not strong enough for autonomous trading.",
+            "What Changed": "ML remains a quality/ranking layer inside a broader decision framework."
+        },
+    ])
+
+    st.dataframe(
+        rejected,
+        width="stretch",
+        hide_index=True,
+        height=360,
+        column_config={
+            "Hypothesis": st.column_config.TextColumn("Hypothesis", width="large"),
+            "Result": st.column_config.TextColumn("Result", width="small"),
+            "Evidence": st.column_config.TextColumn("Evidence", width="large"),
+            "What Changed": st.column_config.TextColumn("What Changed", width="large"),
+        }
+    )
+
+    st.divider()
+
+    st.subheader("7. Research Timeline")
+
+    timeline = pd.DataFrame([
+        {"Script / Phase": "18", "Question": "How do distinct entry events behave under different MA exits?", "Takeaway": "Created clean non-overlapping event-based entry/exit comparisons."},
+        {"Script / Phase": "19", "Question": "What does the trade-return distribution look like?", "Takeaway": "Confirmed trend-following asymmetry: many losses/small wins, a small right tail drives much of the gain."},
+        {"Script / Phase": "20A", "Question": "What does the classic MA200 baseline really do?", "Takeaway": "Generally reduced drawdown but did not beat buy-and-hold CAGR on broad indices."},
+        {"Script / Phase": "20B/20C", "Question": "Do asset behavior and stop families differ?", "Takeaway": "Yes. No single stop dominated all return, consistency, and risk objectives."},
+        {"Script / Phase": "21", "Question": "What happens when returns are actually compounded?", "Takeaway": "Active timing often improved drawdown/Calmar but usually sacrificed raw broad-index CAGR."},
+        {"Script / Phase": "22", "Question": "Can a simple early-entry rotation strategy outperform?", "Takeaway": "Fresh EMA20 was best of the simple rules, but capital became trapped in long-held positions."},
+        {"Script / Phase": "23", "Question": "What predicts a future Early Leader?", "Takeaway": "Built a leakage-safe early-opportunity dataset with forward outcomes and cross-sectional ranks."},
+        {"Script / Phase": "24", "Question": "Can walk-forward ML rank early opportunities?", "Takeaway": "Yes, modestly. RF AUC 0.667 and top-decile lift supported use as a quality filter."},
+        {"Script / Phase": "25", "Question": "Is RF merely learning high volatility?", "Takeaway": "No. Lift persisted within several volatility buckets; successful setups still needed room for normal adverse excursion."},
+        {"Script / Phase": "26", "Question": "Does ML ranking alone create a superior rotation portfolio?", "Takeaway": "No. Entry selection improved faster than position management."},
+        {"Script / Phase": "27", "Question": "Can progressive stops improve portfolio outcomes?", "Takeaway": "Earned progressive protection helped; confirmation-based tightening was too aggressive."},
+        {"Script / Phase": "28/29", "Question": "How much did COVID/stress regimes distort drawdown conclusions?", "Takeaway": "Stress regimes matter, but should be contextualized rather than optimized away."},
+        {"Script / Phase": "30/30A/30B", "Question": "Are the stop backtests mechanically correct?", "Takeaway": "Found and fixed evaluation-window and moving-stop timing/accounting errors."},
+        {"Script / Phase": "31/31A", "Question": "Does MA50 work because replacement trades are superior?", "Takeaway": "No. Main demonstrated benefit is loss containment/diversification, not proven replacement alpha."},
+        {"Script / Phase": "Production Audit", "Question": "Are EMA cross ages counted correctly?", "Takeaway": "Found calendar-day counting bug; corrected production logic to use trading sessions."},
+    ])
+
+    st.dataframe(
+        timeline,
+        width="stretch",
+        hide_index=True,
+        height=560,
+        column_config={
+            "Script / Phase": st.column_config.TextColumn("Script / Phase", width="small"),
+            "Question": st.column_config.TextColumn("Question", width="large"),
+            "Takeaway": st.column_config.TextColumn("Takeaway", width="large"),
+        }
+    )
+
+    st.divider()
+
+    st.subheader("8. Research Limitations")
+
+    st.markdown(
+        """
+        - Historical results do **not** guarantee future performance.
+        - The 67-asset universe contains survivorship and selection effects.
+        - Some ETFs have short histories, so comparisons are not equally deep across all assets.
+        - Transaction costs, slippage, taxes, liquidity, and overnight gaps are not modeled identically in every experiment.
+        - Several parameters were deliberately **not optimized** to avoid turning the research into curve fitting.
+        - The walk-forward model provides ranking lift, not certainty.
+        - Extraordinary market regimes can behave differently from ordinary conditions.
+        - Portfolio-level results depend on diversification, replacement rules, position sizing, and stop architecture—not only entry quality.
+        """
+    )
+
+    st.warning(
+        "Research rule: when an audit contradicts a good story, keep the audit and change the story."
     )
 
 
