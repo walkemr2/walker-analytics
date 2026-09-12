@@ -154,20 +154,140 @@ if page == "Command Center":
             return 0
         return int((d["Decision_Support_State"] == state).sum())
 
-    def cc_rank_text(value):
+    def cc_ordinal_percentile(value):
         if pd.isna(value):
             return "N/A"
-        return f"{value * 100:.0f}th pct"
 
-    def cc_distance(value):
-        if pd.isna(value):
-            return "N/A"
-        return f"{value * 100:+.1f}%"
+        number = int(round(value * 100))
 
-    def cc_day_text(value):
-        if pd.isna(value):
-            return "N/A"
-        return f"Day {int(value)}"
+        if 10 <= (number % 100) <= 20:
+            suffix = "th"
+        else:
+            suffix = {1: "st", 2: "nd", 3: "rd"}.get(number % 10, "th")
+
+        return f"{number}{suffix} percentile"
+
+    def cc_current_ml_status(row):
+        signal_window = str(row.get("Signal_Window", "")).upper()
+        ml_quality = row.get("ML_Quality", "— NO CURRENT ML SIGNAL")
+        rank = row.get("ML_Daily_PctRank")
+
+        in_current_early_window = (
+            "DAY 0" in signal_window
+            or "DAY 1" in signal_window
+            or "DAY 2" in signal_window
+            or "DAY 3" in signal_window
+            or "DAY 4" in signal_window
+        )
+
+        if in_current_early_window and pd.notna(rank):
+            return ml_quality, cc_ordinal_percentile(rank), "CURRENT"
+
+        if pd.notna(rank):
+            return f"{ml_quality} — prior early-window signal", "N/A", "PRIOR"
+
+        return "— NO CURRENT ML SIGNAL", "N/A", "NONE"
+
+    # --------------------------------------------------------
+    # MORNING READ
+    # --------------------------------------------------------
+
+    st.subheader("Morning Read")
+
+    new_detection_count = cc_count("▲ NEW DETECTION")
+    early_watch_count = cc_count("▲ EARLY WATCH")
+    investigate_count = cc_count("★ INVESTIGATE")
+    high_interest_count = cc_count("★★ HIGH INTEREST")
+
+    morning_lines = []
+
+    morning_lines.append(
+        f"{new_detection_count} asset(s) are in Day-0 detection, while "
+        f"{early_watch_count + investigate_count + high_interest_count} asset(s) are in active early-evaluation states."
+    )
+
+    current_ml_candidates = []
+
+    if not d.empty:
+        for _, row in d.iterrows():
+            quality, rank_text, status = cc_current_ml_status(row)
+            if status == "CURRENT" and pd.notna(row.get("ML_Daily_PctRank")):
+                current_ml_candidates.append(
+                    {
+                        "Ticker": row.get("Ticker"),
+                        "Rank": row.get("ML_Daily_PctRank"),
+                        "Quality": quality,
+                        "Confirmation": row.get("Confirmation_State"),
+                        "Structure": row.get("Structure_State"),
+                    }
+                )
+
+    if current_ml_candidates:
+        best_current = sorted(
+            current_ml_candidates,
+            key=lambda x: x["Rank"],
+            reverse=True
+        )[0]
+
+        morning_lines.append(
+            f"{best_current['Ticker']} is the highest-ranked current ML opportunity at "
+            f"{cc_ordinal_percentile(best_current['Rank'])}, with "
+            f"{best_current['Confirmation']} and {best_current['Structure']}."
+        )
+    else:
+        morning_lines.append(
+            "No asset currently combines an active early-window state with a current ML rank."
+        )
+
+    tech_rows = d[d["Ticker"].isin(["XLK", "DRAM", "SOXX", "SMH"])].copy()
+
+    fresh_tech = tech_rows[
+        tech_rows["Decision_Support_State"] == "▲ NEW DETECTION"
+    ]["Ticker"].tolist() if not tech_rows.empty else []
+
+    prior_tech = []
+    if not tech_rows.empty:
+        for _, row in tech_rows.iterrows():
+            quality, rank_text, status = cc_current_ml_status(row)
+            if status == "PRIOR":
+                prior_tech.append(str(row.get("Ticker")))
+
+    if fresh_tech:
+        morning_lines.append(
+            "Technology shows renewed activity with fresh detections in "
+            + ", ".join(fresh_tech)
+            + "."
+        )
+
+    if prior_tech:
+        morning_lines.append(
+            "Prior early-window ML evidence is still displayed for "
+            + ", ".join(prior_tech)
+            + ", but those ranks are historical context rather than current ML opportunities."
+        )
+
+    if investigate_count == 0 and high_interest_count == 0:
+        morning_lines.append(
+            "Current emphasis is detection and observation rather than a confirmed early-entry setup."
+        )
+    elif high_interest_count > 0:
+        morning_lines.append(
+            f"{high_interest_count} asset(s) currently meet the High Interest state and deserve deeper investigation."
+        )
+    else:
+        morning_lines.append(
+            f"{investigate_count} asset(s) currently meet the Investigate state and deserve deeper review."
+        )
+
+    for line in morning_lines:
+        st.write("• " + line)
+
+    st.info(
+        "Morning Read is deterministic. It translates the tables below into plain language; "
+        "it does not generate a new prediction or trade recommendation."
+    )
+
+    st.divider()
 
     # --------------------------------------------------------
     # TOP-LINE MARKET STATE
@@ -198,10 +318,10 @@ if page == "Command Center":
     st.subheader("2. Current Opportunity Pipeline")
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
-    c1.metric("New Detection", cc_count("▲ NEW DETECTION"))
-    c2.metric("Early Watch", cc_count("▲ EARLY WATCH"))
-    c3.metric("Investigate", cc_count("★ INVESTIGATE"))
-    c4.metric("High Interest", cc_count("★★ HIGH INTEREST"))
+    c1.metric("New Detection", new_detection_count)
+    c2.metric("Early Watch", early_watch_count)
+    c3.metric("Investigate", investigate_count)
+    c4.metric("High Interest", high_interest_count)
     c5.metric("Established Leader", cc_count("● ESTABLISHED LEADER"))
     c6.metric("Structural Caution", cc_count("▼ STRUCTURAL CAUTION"))
 
@@ -230,16 +350,39 @@ if page == "Command Center":
     ].copy() if "Decision_Support_State" in d.columns else d.head(0).copy()
 
     if not opportunities.empty:
+        current_quality = []
+        current_rank = []
+        prior_quality = []
+        prior_rank = []
+
+        for _, row in opportunities.iterrows():
+            quality, rank_text, status = cc_current_ml_status(row)
+
+            if status == "CURRENT":
+                current_quality.append(quality)
+                current_rank.append(rank_text)
+                prior_quality.append("")
+                prior_rank.append("")
+            elif status == "PRIOR":
+                current_quality.append("— NO CURRENT ML SIGNAL")
+                current_rank.append("N/A")
+                prior_quality.append(quality)
+                prior_rank.append(cc_ordinal_percentile(row.get("ML_Daily_PctRank")))
+            else:
+                current_quality.append("— NO CURRENT ML SIGNAL")
+                current_rank.append("N/A")
+                prior_quality.append("")
+                prior_rank.append("")
+
+        opportunities["Current_ML_Quality"] = current_quality
+        opportunities["Current_ML_Rank"] = current_rank
+        opportunities["Prior_ML_Quality"] = prior_quality
+        opportunities["Prior_ML_Rank"] = prior_rank
+
         if "Priority_Sort" in opportunities.columns:
             opportunities = opportunities.sort_values(
                 ["Priority_Sort", "ML_Daily_PctRank"],
                 ascending=[True, False],
-                na_position="last"
-            )
-        elif "ML_Daily_PctRank" in opportunities.columns:
-            opportunities = opportunities.sort_values(
-                "ML_Daily_PctRank",
-                ascending=False,
                 na_position="last"
             )
 
@@ -249,8 +392,10 @@ if page == "Command Center":
                 "Decision_Support_State",
                 "Detection_State",
                 "Signal_Window",
-                "ML_Quality",
-                "ML_Daily_PctRank",
+                "Current_ML_Quality",
+                "Current_ML_Rank",
+                "Prior_ML_Quality",
+                "Prior_ML_Rank",
                 "Confirmation_State",
                 "Structure_State",
                 "Early_Rotation_State",
@@ -262,9 +407,6 @@ if page == "Command Center":
 
         attention = opportunities[attention_cols].head(12).copy()
 
-        if "ML_Daily_PctRank" in attention.columns:
-            attention["ML_Daily_PctRank"] = attention["ML_Daily_PctRank"] * 100
-
         if "Distance_To_MA50" in attention.columns:
             attention["Distance_To_MA50"] = attention["Distance_To_MA50"] * 100
 
@@ -272,14 +414,16 @@ if page == "Command Center":
             attention,
             width="stretch",
             hide_index=True,
-            height=360,
+            height=380,
             column_config={
                 "Ticker": st.column_config.TextColumn("Ticker", width="small"),
                 "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
                 "Detection_State": st.column_config.TextColumn("Detection", width="medium"),
                 "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
-                "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
-                "ML_Daily_PctRank": st.column_config.NumberColumn("ML Rank", format="%.1f%%"),
+                "Current_ML_Quality": st.column_config.TextColumn("Current ML Quality", width="medium"),
+                "Current_ML_Rank": st.column_config.TextColumn("Current ML Rank", width="small"),
+                "Prior_ML_Quality": st.column_config.TextColumn("Prior ML Quality", width="medium"),
+                "Prior_ML_Rank": st.column_config.TextColumn("Prior ML Rank", width="small"),
                 "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
                 "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
                 "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
@@ -287,8 +431,8 @@ if page == "Command Center":
         )
 
         st.info(
-            "Next step: open Rotation Decision Support for the candidate-level explanation, then MA / EMA Radar "
-            "for technical timing, and Wide Beach for exact historical MA context."
+            "Current ML columns apply only while the asset is in today's early-window population. "
+            "Prior ML columns preserve useful historical context after the asset ages out of that window."
         )
     else:
         st.info("No current early-opportunity states are present in the latest decision snapshot.")
@@ -314,13 +458,44 @@ if page == "Command Center":
         tech["_order"] = tech["Ticker"].map(tech_order)
         tech = tech.sort_values("_order")
 
+        tech_current_quality = []
+        tech_current_rank = []
+        tech_prior_quality = []
+        tech_prior_rank = []
+
+        for _, row in tech.iterrows():
+            quality, rank_text, status = cc_current_ml_status(row)
+
+            if status == "CURRENT":
+                tech_current_quality.append(quality)
+                tech_current_rank.append(rank_text)
+                tech_prior_quality.append("")
+                tech_prior_rank.append("")
+            elif status == "PRIOR":
+                tech_current_quality.append("— NO CURRENT ML SIGNAL")
+                tech_current_rank.append("N/A")
+                tech_prior_quality.append(quality)
+                tech_prior_rank.append(cc_ordinal_percentile(row.get("ML_Daily_PctRank")))
+            else:
+                tech_current_quality.append("— NO CURRENT ML SIGNAL")
+                tech_current_rank.append("N/A")
+                tech_prior_quality.append("")
+                tech_prior_rank.append("")
+
+        tech["Current_ML_Quality"] = tech_current_quality
+        tech["Current_ML_Rank"] = tech_current_rank
+        tech["Prior_ML_Quality"] = tech_prior_quality
+        tech["Prior_ML_Rank"] = tech_prior_rank
+
         tech_cols = [
             c for c in [
                 "Ticker",
                 "Decision_Support_State",
                 "Signal_Window",
-                "ML_Quality",
-                "ML_Daily_PctRank",
+                "Current_ML_Quality",
+                "Current_ML_Rank",
+                "Prior_ML_Quality",
+                "Prior_ML_Rank",
                 "Confirmation_State",
                 "Structure_State",
                 "Rotation_State",
@@ -330,9 +505,6 @@ if page == "Command Center":
 
         tech_view = tech[tech_cols].copy()
 
-        if "ML_Daily_PctRank" in tech_view.columns:
-            tech_view["ML_Daily_PctRank"] = tech_view["ML_Daily_PctRank"] * 100
-
         st.dataframe(
             tech_view,
             width="stretch",
@@ -341,8 +513,10 @@ if page == "Command Center":
                 "Ticker": st.column_config.TextColumn("Ticker", width="small"),
                 "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
                 "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
-                "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
-                "ML_Daily_PctRank": st.column_config.NumberColumn("ML Rank", format="%.1f%%"),
+                "Current_ML_Quality": st.column_config.TextColumn("Current ML Quality", width="medium"),
+                "Current_ML_Rank": st.column_config.TextColumn("Current ML Rank", width="small"),
+                "Prior_ML_Quality": st.column_config.TextColumn("Prior ML Quality", width="medium"),
+                "Prior_ML_Rank": st.column_config.TextColumn("Prior ML Rank", width="small"),
                 "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
                 "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
                 "Rotation_State": st.column_config.TextColumn("Rotation State", width="small"),
