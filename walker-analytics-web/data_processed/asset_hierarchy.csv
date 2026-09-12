@@ -1,0 +1,68 @@
+Ticker,Asset_Class,Sector,Industry_Theme,Instrument_Form,Instrument_Type,Peer_Group,Hierarchy_Level
+AIQ,Equities,Technology,Artificial Intelligence,ETF,Thematic ETF,AI & Automation,Theme
+AIRR,Equities,Industrials,U.S. Industrial Renaissance,ETF,Thematic ETF,Industrial Reshoring,Theme
+AMLP,Equities,Energy,Midstream / MLPs,ETF,Thematic ETF,Energy Infrastructure,Industry/Theme
+ARKG,Equities,Health Care,Genomics / Disruptive Health,ETF,Thematic ETF,Biotech & Genomics,Theme
+AWAY,Equities,Consumer Discretionary,Travel Technology,ETF,Thematic ETF,Travel & Leisure,Theme
+BATT,Equities,Materials,Battery Materials / EV Supply Chain,ETF,Thematic ETF,Energy Transition Materials,Theme
+BETZ,Equities,Consumer Discretionary,Sports Betting / iGaming,ETF,Thematic ETF,Gaming & Betting,Theme
+BOTZ,Equities,Technology,Robotics / Artificial Intelligence,ETF,Thematic ETF,AI & Automation,Theme
+CIBR,Equities,Technology,Cybersecurity,ETF,Thematic ETF,Cybersecurity,Theme
+COPX,Equities,Materials,Copper Miners,ETF,Industry ETF,Metals & Mining,Industry
+CORN,Commodities,Agriculture,Corn,ETF,Commodity ETF,Agriculture Commodities,Commodity
+CPER,Commodities,Metals,Copper,ETF,Commodity ETF,Industrial Metals,Commodity
+DBA,Commodities,Agriculture,Broad Agriculture,ETF,Commodity ETF,Agriculture Commodities,Commodity Basket
+DIA,Equities,Broad Market,Dow Jones Industrial Average,ETF,Market Index ETF,Large Cap U.S.,Market
+DRAM,Equities,Technology,Semiconductors / Memory,ETF,Thematic ETF,Semiconductors,Industry/Theme
+ETHE,Digital Assets,Crypto,Ethereum,Trust/ETF,Digital Asset Fund,Crypto Assets,Digital Asset
+GLD,Commodities,Precious Metals,Gold,ETF,Commodity ETF,Precious Metals,Commodity
+IAI,Equities,Financials,Broker-Dealers / Exchanges,ETF,Industry ETF,Capital Markets,Industry
+IBB,Equities,Health Care,Biotechnology,ETF,Industry ETF,Biotechnology,Industry
+IBIT,Digital Assets,Crypto,Bitcoin,ETF,Digital Asset Fund,Crypto Assets,Digital Asset
+IEF,Fixed Income,Treasuries,7-10 Year U.S. Treasury,ETF,Bond ETF,Intermediate Treasuries,Duration
+IGV,Equities,Technology,Software,ETF,Industry ETF,Software,Industry
+ITA,Equities,Industrials,Aerospace & Defense,ETF,Industry ETF,Aerospace & Defense,Industry
+IWM,Equities,Broad Market,Russell 2000 Small Cap,ETF,Market Index ETF,Small Cap U.S.,Market
+KBE,Equities,Financials,Banks,ETF,Industry ETF,Banking,Industry
+KBWD,Equities,Financials,High Dividend Financials,ETF,Industry ETF,Financial Income,Industry/Style
+KRE,Equities,Financials,Regional Banks,ETF,Industry ETF,Banking,Industry
+LITP,Equities,Materials,Lithium Miners,ETF,Industry ETF,Energy Transition Materials,Industry
+OIH,Equities,Energy,Oil Services,ETF,Industry ETF,Oil & Gas Services,Industry
+ONLN,Equities,Consumer Discretionary,Online Retail,ETF,Thematic ETF,E-Commerce,Theme
+PAVE,Equities,Industrials,U.S. Infrastructure,ETF,Thematic ETF,Infrastructure,Theme
+PDBC,Commodities,Broad Commodities,Diversified Commodities,ETF,Commodity ETF,Broad Commodities,Commodity Basket
+PEJ,Equities,Consumer Discretionary,Leisure & Entertainment,ETF,Thematic ETF,Travel & Leisure,Theme
+PPH,Equities,Health Care,Pharmaceuticals,ETF,Industry ETF,Pharmaceuticals,Industry
+QQQ,Equities,Broad Market,Nasdaq-100 Growth / Tech Heavy,ETF,Market Index ETF,Large Cap Growth,Market/Style
+REZ,Equities,Real Estate,Residential & Specialty REITs,ETF,Industry ETF,Real Estate,Industry
+RSP,Equities,Broad Market,S&P 500 Equal Weight,ETF,Market Index ETF,Large Cap U.S.,Market/Style
+SHY,Fixed Income,Treasuries,1-3 Year U.S. Treasury,ETF,Bond ETF,Short Treasuries,Duration
+SKYY,Equities,Technology,Cloud Computing,ETF,Thematic ETF,Cloud & Software,Theme
+SLV,Commodities,Precious Metals,Silver,ETF,Commodity ETF,Precious Metals,Commodity
+SLX,Equities,Materials,Steel,ETF,Industry ETF,Metals & Mining,Industry
+SMH,Equities,Technology,Semiconductors,ETF,Industry ETF,Semiconductors,Industry
+SOXX,Equities,Technology,Semiconductors,ETF,Industry ETF,Semiconductors,Industry
+SPY,Equities,Broad Market,S&P 500,ETF,Market Index ETF,Large Cap U.S.,Market
+SRVR,Equities,Real Estate,Data Center / Digital Infrastructure,ETF,Thematic ETF,Digital Infrastructure,Theme
+TIP,Fixed Income,Treasuries,Inflation-Protected Treasuries,ETF,Bond ETF,Inflation-Protected Bonds,Duration/Inflation
+TLT,Fixed Income,Treasuries,20+ Year U.S. Treasury,ETF,Bond ETF,Long Treasuries,Duration
+UNG,Commodities,Energy,Natural Gas,ETF,Commodity ETF,Energy Commodities,Commodity
+USO,Commodities,Energy,Crude Oil,ETF,Commodity ETF,Energy Commodities,Commodity
+UUP,Currencies,U.S. Dollar,Long U.S. Dollar,ETF,Currency ETF,Currencies,Currency
+VIXY,Volatility,Equity Volatility,VIX Short-Term Futures,ETF,Volatility ETF,Volatility,Volatility
+VNQ,Equities,Real Estate,Broad U.S. REITs,ETF,Sector ETF,Real Estate,Sector
+VOO,Equities,Broad Market,S&P 500,ETF,Market Index ETF,Large Cap U.S.,Market
+WEAT,Commodities,Agriculture,Wheat,ETF,Commodity ETF,Agriculture Commodities,Commodity
+XBI,Equities,Health Care,Biotechnology,ETF,Industry ETF,Biotechnology,Industry
+XLB,Equities,Materials,Broad Materials,ETF,Sector ETF,Materials,Sector
+XLC,Equities,Communication Services,Broad Communication Services,ETF,Sector ETF,Communication Services,Sector
+XLE,Equities,Energy,Broad Energy,ETF,Sector ETF,Energy,Sector
+XLF,Equities,Financials,Broad Financials,ETF,Sector ETF,Financials,Sector
+XLI,Equities,Industrials,Broad Industrials,ETF,Sector ETF,Industrials,Sector
+XLK,Equities,Technology,Broad Technology,ETF,Sector ETF,Technology,Sector
+XLP,Equities,Consumer Staples,Broad Consumer Staples,ETF,Sector ETF,Consumer Staples,Sector
+XLRE,Equities,Real Estate,Broad Real Estate,ETF,Sector ETF,Real Estate,Sector
+XLU,Equities,Utilities,Broad Utilities,ETF,Sector ETF,Utilities,Sector
+XLV,Equities,Health Care,Broad Health Care,ETF,Sector ETF,Health Care,Sector
+XLY,Equities,Consumer Discretionary,Broad Consumer Discretionary,ETF,Sector ETF,Consumer Discretionary,Sector
+XOP,Equities,Energy,Oil & Gas Exploration & Production,ETF,Industry ETF,Oil & Gas E&P,Industry
