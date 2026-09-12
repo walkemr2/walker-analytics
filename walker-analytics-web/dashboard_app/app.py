@@ -121,6 +121,11 @@ if page == "Command Center":
 
     st.header("Sector Flow Decision Support System")
 
+    st.caption(
+        "Morning decision brief. This page summarizes lower-level analytics already calculated elsewhere in Walker Analytics. "
+        "It does not create a new score; each conclusion can be investigated on the supporting pages."
+    )
+
     latest_refresh = refresh.iloc[-1]
 
     leaders = rotation[rotation["Rotation_State"] == "LEADER"].copy()
@@ -132,20 +137,43 @@ if page == "Command Center":
     early_watch = early[early["Early_Rotation_State"] == "EARLY WATCH"].copy()
     extended = early[early["Early_Rotation_State"] == "EXTENDED"].copy()
 
-    top_leader = (
-        leaders.sort_values("Rotation_Readiness_Score", ascending=False).iloc[0]["Ticker"]
-        if not leaders.empty else "N/A"
-    )
+    d = decision.copy()
 
-    top_emerging = (
-        emerging.sort_values("Rotation_Readiness_Score", ascending=False).iloc[0]["Ticker"]
-        if not emerging.empty else "N/A"
-    )
+    for col in [
+        "ML_Daily_PctRank",
+        "Distance_To_MA50",
+        "Distance_To_MA200",
+        "Days_Since_EMA20_Cross",
+        "Priority_Sort",
+    ]:
+        if col in d.columns:
+            d[col] = pd.to_numeric(d[col], errors="coerce")
 
-    top_early = (
-        early_entries.sort_values("Early_Rotation_Score", ascending=False).iloc[0]["Ticker"]
-        if not early_entries.empty else "N/A"
-    )
+    def cc_count(state):
+        if "Decision_Support_State" not in d.columns:
+            return 0
+        return int((d["Decision_Support_State"] == state).sum())
+
+    def cc_rank_text(value):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value * 100:.0f}th pct"
+
+    def cc_distance(value):
+        if pd.isna(value):
+            return "N/A"
+        return f"{value * 100:+.1f}%"
+
+    def cc_day_text(value):
+        if pd.isna(value):
+            return "N/A"
+        return f"Day {int(value)}"
+
+    # --------------------------------------------------------
+    # TOP-LINE MARKET STATE
+    # --------------------------------------------------------
+
+    st.subheader("1. Market / Universe State")
 
     col1, col2, col3, col4, col5, col6 = st.columns(6)
 
@@ -156,25 +184,265 @@ if page == "Command Center":
     col5.metric("Weakening", len(weakening))
     col6.metric("Last Refresh", latest_refresh.get("Refresh_Time", "N/A"))
 
-    st.divider()
-
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        st.subheader("Top Early Entry")
-        st.metric("Highest Early Rotation Score", top_early)
-
-    with col2:
-        st.subheader("Top Confirmed Leader")
-        st.metric("Highest Confirmed Readiness", top_leader)
-
-    with col3:
-        st.subheader("Top Emerging Candidate")
-        st.metric("Highest Emerging Readiness", top_emerging)
+    st.caption(
+        "Use these counts as context, not trade signals. A rising number of early entries or weakening assets "
+        "can indicate broadening opportunity or deterioration, but the lower-level pages explain which assets and why."
+    )
 
     st.divider()
 
-    st.subheader("Rotation State Distribution")
+    # --------------------------------------------------------
+    # OPPORTUNITY PIPELINE
+    # --------------------------------------------------------
+
+    st.subheader("2. Current Opportunity Pipeline")
+
+    c1, c2, c3, c4, c5, c6 = st.columns(6)
+    c1.metric("New Detection", cc_count("▲ NEW DETECTION"))
+    c2.metric("Early Watch", cc_count("▲ EARLY WATCH"))
+    c3.metric("Investigate", cc_count("★ INVESTIGATE"))
+    c4.metric("High Interest", cc_count("★★ HIGH INTEREST"))
+    c5.metric("Established Leader", cc_count("● ESTABLISHED LEADER"))
+    c6.metric("Structural Caution", cc_count("▼ STRUCTURAL CAUTION"))
+
+    st.caption(
+        "Lifecycle summary from Rotation Decision Support. Day 0 is detection; Days 1–4 are the preferred "
+        "evaluation window; Day 5 is late-early; older setups transition toward established-trend logic."
+    )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # WHAT DESERVES ATTENTION
+    # --------------------------------------------------------
+
+    st.subheader("3. What Deserves Attention Now?")
+
+    opportunity_states = [
+        "★★ HIGH INTEREST",
+        "★ INVESTIGATE",
+        "▲ NEW DETECTION",
+        "▲ EARLY WATCH",
+    ]
+
+    opportunities = d[
+        d["Decision_Support_State"].isin(opportunity_states)
+    ].copy() if "Decision_Support_State" in d.columns else d.head(0).copy()
+
+    if not opportunities.empty:
+        if "Priority_Sort" in opportunities.columns:
+            opportunities = opportunities.sort_values(
+                ["Priority_Sort", "ML_Daily_PctRank"],
+                ascending=[True, False],
+                na_position="last"
+            )
+        elif "ML_Daily_PctRank" in opportunities.columns:
+            opportunities = opportunities.sort_values(
+                "ML_Daily_PctRank",
+                ascending=False,
+                na_position="last"
+            )
+
+        attention_cols = [
+            c for c in [
+                "Ticker",
+                "Decision_Support_State",
+                "Detection_State",
+                "Signal_Window",
+                "ML_Quality",
+                "ML_Daily_PctRank",
+                "Confirmation_State",
+                "Structure_State",
+                "Early_Rotation_State",
+                "Rotation_State",
+                "Distance_To_MA50",
+            ]
+            if c in opportunities.columns
+        ]
+
+        attention = opportunities[attention_cols].head(12).copy()
+
+        if "ML_Daily_PctRank" in attention.columns:
+            attention["ML_Daily_PctRank"] = attention["ML_Daily_PctRank"] * 100
+
+        if "Distance_To_MA50" in attention.columns:
+            attention["Distance_To_MA50"] = attention["Distance_To_MA50"] * 100
+
+        st.dataframe(
+            attention,
+            width="stretch",
+            hide_index=True,
+            height=360,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+                "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+                "Detection_State": st.column_config.TextColumn("Detection", width="medium"),
+                "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
+                "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+                "ML_Daily_PctRank": st.column_config.NumberColumn("ML Rank", format="%.1f%%"),
+                "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+                "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
+                "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+            }
+        )
+
+        st.info(
+            "Next step: open Rotation Decision Support for the candidate-level explanation, then MA / EMA Radar "
+            "for technical timing, and Wide Beach for exact historical MA context."
+        )
+    else:
+        st.info("No current early-opportunity states are present in the latest decision snapshot.")
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # TECHNOLOGY COMPLEX SUMMARY
+    # --------------------------------------------------------
+
+    st.subheader("4. Technology Complex")
+
+    st.caption(
+        "Compact peer-context summary for XLK / DRAM / SOXX / SMH. "
+        "This is a lifecycle comparison—not a new technology score."
+    )
+
+    tech_order = {"XLK": 1, "DRAM": 2, "SOXX": 3, "SMH": 4}
+
+    tech = d[d["Ticker"].isin(tech_order.keys())].copy()
+
+    if not tech.empty:
+        tech["_order"] = tech["Ticker"].map(tech_order)
+        tech = tech.sort_values("_order")
+
+        tech_cols = [
+            c for c in [
+                "Ticker",
+                "Decision_Support_State",
+                "Signal_Window",
+                "ML_Quality",
+                "ML_Daily_PctRank",
+                "Confirmation_State",
+                "Structure_State",
+                "Rotation_State",
+            ]
+            if c in tech.columns
+        ]
+
+        tech_view = tech[tech_cols].copy()
+
+        if "ML_Daily_PctRank" in tech_view.columns:
+            tech_view["ML_Daily_PctRank"] = tech_view["ML_Daily_PctRank"] * 100
+
+        st.dataframe(
+            tech_view,
+            width="stretch",
+            hide_index=True,
+            column_config={
+                "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+                "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+                "Signal_Window": st.column_config.TextColumn("Signal Window", width="medium"),
+                "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+                "ML_Daily_PctRank": st.column_config.NumberColumn("ML Rank", format="%.1f%%"),
+                "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+                "Structure_State": st.column_config.TextColumn("MA Structure", width="medium"),
+                "Rotation_State": st.column_config.TextColumn("Rotation State", width="small"),
+            }
+        )
+    else:
+        st.info("Technology-complex assets are not available in the current decision snapshot.")
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # LEADERSHIP / RISK SUMMARY
+    # --------------------------------------------------------
+
+    st.subheader("5. Leadership & Risk Watch")
+
+    left, right = st.columns(2)
+
+    with left:
+        st.markdown("#### Established Leadership")
+
+        leader_view = get_top_state(rotation, "LEADER", n=8)
+
+        leader_cols = [
+            c for c in [
+                "Ticker",
+                "Momentum_Score",
+                "Acceleration_Score",
+                "Trend_Score",
+                "Rotation_Readiness_Score",
+                "Rotation_Readiness_Rank",
+            ]
+            if c in leader_view.columns
+        ]
+
+        st.dataframe(
+            leader_view[leader_cols],
+            width="stretch",
+            hide_index=True,
+            height=300
+        )
+
+        st.caption(
+            "These are already-confirmed leaders. Use Rotation Analysis to inspect the evidence and whether leadership is strengthening or fading."
+        )
+
+    with right:
+        st.markdown("#### Deterioration / Structural Attention")
+
+        risk_states = [
+            "● PULLBACK / REVIEW",
+            "▼ STRUCTURAL CAUTION",
+        ]
+
+        risk_view = d[
+            d["Decision_Support_State"].isin(risk_states)
+        ].copy() if "Decision_Support_State" in d.columns else d.head(0).copy()
+
+        risk_cols = [
+            c for c in [
+                "Ticker",
+                "Decision_Support_State",
+                "Detection_State",
+                "Structure_State",
+                "Rotation_State",
+                "Distance_To_MA50",
+                "Distance_To_MA200",
+            ]
+            if c in risk_view.columns
+        ]
+
+        risk_view = risk_view[risk_cols].head(12).copy()
+
+        for col in ["Distance_To_MA50", "Distance_To_MA200"]:
+            if col in risk_view.columns:
+                risk_view[col] = risk_view[col] * 100
+
+        st.dataframe(
+            risk_view,
+            width="stretch",
+            hide_index=True,
+            height=300,
+            column_config={
+                "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+                "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+                "Distance_To_MA200": st.column_config.NumberColumn("% vs MA200", format="%.1f%%"),
+            }
+        )
+
+        st.caption(
+            "This is a review list, not an automatic sell list. MA structure and position context determine whether the move is a normal pullback or actual structural failure."
+        )
+
+    st.divider()
+
+    # --------------------------------------------------------
+    # ROTATION DISTRIBUTION
+    # --------------------------------------------------------
+
+    st.subheader("6. Rotation State Distribution")
 
     state_order = ["LEADER", "EMERGING", "WATCH", "WEAKENING", "LAGGING"]
 
@@ -197,53 +465,68 @@ if page == "Command Center":
 
     st.divider()
 
-    col1, col2 = st.columns(2)
+    # --------------------------------------------------------
+    # RESEARCH RULES
+    # --------------------------------------------------------
 
-    with col1:
-        st.subheader("Leadership")
+    st.subheader("7. Walker Research Rules")
 
-        leader_view = get_top_state(rotation, "LEADER", n=8)
+    rules = pd.DataFrame([
+        {
+            "Rule": "Day 0 = detection",
+            "Why": "The cross is the earliest warning, not proof.",
+            "Where to Investigate": "MA / EMA Radar"
+        },
+        {
+            "Rule": "Days 1–4 = preferred evaluation window",
+            "Why": "Historical Early-Leader rates improved modestly after the cross while the move was still early.",
+            "Where to Investigate": "Rotation Decision Support"
+        },
+        {
+            "Rule": "Day 3 deserves extra attention—not an automatic buy",
+            "Why": "Day 3 had the strongest simple day-age rate in the sample, but only slightly.",
+            "Where to Investigate": "User Guide / Research Evidence"
+        },
+        {
+            "Rule": "ML rank = quality filter",
+            "Why": "Walk-forward Random Forest improved ranking lift but did not justify autonomous trading.",
+            "Where to Investigate": "Rotation Decision Support / Research Evidence"
+        },
+        {
+            "Rule": "MA200 = wider structural context",
+            "Why": "Historically useful for drawdown control and long-trend preservation, but often slower and lower-CAGR.",
+            "Where to Investigate": "Wide Beach / Research Evidence"
+        },
+        {
+            "Rule": "Protection should be earned",
+            "Why": "Confirmation-only tightening often truncated winners.",
+            "Where to Investigate": "Research Evidence"
+        },
+        {
+            "Rule": "Do not assume the next ranked asset is superior",
+            "Why": "Slot-aware replacement testing did not support positive capital-recycling alpha.",
+            "Where to Investigate": "Research Evidence"
+        },
+    ])
 
-        leader_cols = [
-            c for c in [
-                "Ticker",
-                "Momentum_Score",
-                "Acceleration_Score",
-                "Trend_Score",
-                "Rotation_Readiness_Score",
-                "Rotation_Readiness_Rank",
-            ]
-            if c in leader_view.columns
-        ]
+    st.dataframe(
+        rules,
+        width="stretch",
+        hide_index=True,
+        height=330,
+        column_config={
+            "Rule": st.column_config.TextColumn("Rule", width="medium"),
+            "Why": st.column_config.TextColumn("Why", width="large"),
+            "Where to Investigate": st.column_config.TextColumn("Where to Investigate", width="medium"),
+        }
+    )
 
-        st.dataframe(
-            leader_view[leader_cols],
-            use_container_width=True,
-            hide_index=True
-        )
+    st.success(
+        "Command Center principle: summarize lower-level evidence; do not create a new mystery score. "
+        "When something looks important here, drill down to the page that produced the conclusion."
+    )
 
-    with col2:
-        st.subheader("Emerging Rotation")
 
-        emerging_view = get_top_state(rotation, "EMERGING", n=8)
-
-        emerging_cols = [
-            c for c in [
-                "Ticker",
-                "Momentum_Score",
-                "Acceleration_Score",
-                "Trend_Score",
-                "Rotation_Readiness_Score",
-                "Rotation_Readiness_Rank",
-            ]
-            if c in emerging_view.columns
-        ]
-
-        st.dataframe(
-            emerging_view[emerging_cols],
-            use_container_width=True,
-            hide_index=True
-        )
 # ============================================================
 # MA / EMA RADAR
 # ============================================================
