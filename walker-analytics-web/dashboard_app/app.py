@@ -32,6 +32,7 @@ ROTATION_FILE = DATA_DIR / "web_rotation_snapshot.csv"
 EARLY_FILE = DATA_DIR / "web_early_rotation_snapshot.csv"
 PRICE_FILE = DATA_DIR / "sector_prices.csv"
 MA_WIDE_FILE = DATA_DIR / "moving_average_wide.csv"
+WIDE_BEACH_FILE = DATA_DIR / "web_wide_beach_snapshot.csv"
 MA_RADAR_FILE = DATA_DIR / "web_ma_wide_snapshot.csv"
 DECISION_FILE = DATA_DIR / "web_rotation_decision_snapshot.csv"
 REFRESH_FILE = DATA_DIR / "web_refresh_log.csv"
@@ -53,12 +54,13 @@ def load_data():
     ma_wide = pd.read_csv(MA_WIDE_FILE)
     ma_radar = pd.read_csv(MA_RADAR_FILE)
     decision = pd.read_csv(DECISION_FILE)
+    wide_beach = pd.read_csv(WIDE_BEACH_FILE)
     refresh = pd.read_csv(REFRESH_FILE)
 
-    return snapshot, rotation, early, prices, ma_wide, ma_radar, decision, refresh
+    return snapshot, rotation, early, prices, ma_wide, ma_radar, decision, wide_beach, refresh
 
 
-snapshot, rotation, early, prices, ma_wide, ma_radar, decision, refresh = load_data()
+snapshot, rotation, early, prices, ma_wide, ma_radar, decision, wide_beach, refresh = load_data()
 
 # ============================================================
 # GLOBAL HEADER
@@ -2540,6 +2542,181 @@ elif page == "Wide Beach":
         "Historical moving-average workbench built directly from moving_average_wide.csv. "
         "Use it to narrow the universe, isolate specific moving averages, inspect exact historical "
         "relationships, and then drill into one asset without losing the full underlying data."
+    )
+
+    # --------------------------------------------------------
+    # CURRENT LIFECYCLE BEACH
+    # --------------------------------------------------------
+
+    wb = wide_beach.copy()
+
+    for col in [
+        "Lifecycle_Priority", "ML_Daily_PctRank", "MA_Breadth_Ratio",
+        "Price", "Distance_To_EMA20", "Distance_To_MA50",
+        "Distance_To_MA200", "Days_Since_Price_EMA20_Cross"
+    ]:
+        if col in wb.columns:
+            wb[col] = pd.to_numeric(wb[col], errors="coerce")
+
+    market_data_through = (
+        pd.to_datetime(wb["Market_Data_Through"], errors="coerce").max()
+        if "Market_Data_Through" in wb.columns else pd.NaT
+    )
+
+    system_refresh = (
+        wb["System_Refresh_Time"].dropna().iloc[-1]
+        if "System_Refresh_Time" in wb.columns and not wb["System_Refresh_Time"].dropna().empty
+        else "N/A"
+    )
+
+    st.subheader("Current Lifecycle Beach")
+    st.caption(
+        "Current-state view of the full universe: Early Detection → Confirming / Building → "
+        "Leading → Mature / Extended → Weakening / Pullback → Below Structure. "
+        "The stage labels and symbols carry the meaning; color is supplemental only."
+    )
+
+    m1, m2, m3 = st.columns(3)
+    m1.metric("Assets", wb["Ticker"].nunique())
+    m2.metric(
+        "Market Data Through",
+        market_data_through.strftime("%Y-%m-%d") if pd.notna(market_data_through) else "N/A"
+    )
+    m3.metric("System Refresh", system_refresh)
+
+    lifecycle_order = [
+        "1 — EARLY DETECTION",
+        "2 — CONFIRMING / BUILDING",
+        "3 — LEADING",
+        "4 — MATURE / EXTENDED",
+        "5 — WEAKENING / PULLBACK",
+        "6 — BELOW STRUCTURE",
+    ]
+
+    lifecycle_short = {
+        "1 — EARLY DETECTION": "1. EARLY DETECTION",
+        "2 — CONFIRMING / BUILDING": "2. CONFIRMING / BUILDING",
+        "3 — LEADING": "3. LEADING",
+        "4 — MATURE / EXTENDED": "4. MATURE / EXTENDED",
+        "5 — WEAKENING / PULLBACK": "5. WEAKENING / PULLBACK",
+        "6 — BELOW STRUCTURE": "6. BELOW STRUCTURE",
+    }
+
+    counts = wb["Lifecycle_Zone"].value_counts().reindex(lifecycle_order, fill_value=0)
+    beach_cols = st.columns(6)
+    for idx, zone in enumerate(lifecycle_order):
+        beach_cols[idx].metric(lifecycle_short[zone], int(counts.loc[zone]))
+
+    st.markdown("#### Lifecycle Flow")
+    for zone in lifecycle_order:
+        tickers_here = wb.loc[wb["Lifecycle_Zone"] == zone, "Ticker"].astype(str).tolist()
+        ticker_text = ", ".join(tickers_here) if tickers_here else "—"
+        st.markdown(f"**{lifecycle_short[zone]} ({len(tickers_here)})** — {ticker_text}")
+        if zone != lifecycle_order[-1]:
+            st.markdown("↓")
+
+    st.info(
+        "Wide Beach is a lifecycle / structure view, not a BUY / SELL engine. "
+        "An asset can retain strong prior ML evidence while its current technical lifecycle weakens."
+    )
+
+    st.divider()
+
+    st.subheader("Current Wide Beach Detail")
+
+    zone_filter = st.multiselect(
+        "Lifecycle Zones",
+        lifecycle_order,
+        default=lifecycle_order,
+        key="wide_beach_lifecycle_filter"
+    )
+
+    current_view = wb[wb["Lifecycle_Zone"].isin(zone_filter)].copy()
+    current_view = current_view.sort_values(
+        ["Lifecycle_Priority", "ML_Daily_PctRank", "Ticker"],
+        ascending=[True, False, True],
+        na_position="last"
+    )
+
+    current_cols = [c for c in [
+        "Ticker", "Lifecycle_Zone", "Decision_Support_State", "Detection_State",
+        "ML_Quality", "ML_Daily_PctRank", "Confirmation_State", "Rotation_State",
+        "Structure_State", "Structure_History_Status", "MA_Breadth_Display",
+        "EMA20_Position", "MA30_Position", "MA50_Position", "MA100_Position",
+        "MA200_Position", "Distance_To_MA50"
+    ] if c in current_view.columns]
+
+    current_display = current_view[current_cols].copy()
+    if "ML_Daily_PctRank" in current_display.columns:
+        current_display["ML_Daily_PctRank"] = current_display["ML_Daily_PctRank"] * 100
+    if "Distance_To_MA50" in current_display.columns:
+        current_display["Distance_To_MA50"] = current_display["Distance_To_MA50"] * 100
+
+    st.dataframe(
+        current_display,
+        width="stretch",
+        hide_index=True,
+        height=520,
+        column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "Lifecycle_Zone": st.column_config.TextColumn("Lifecycle", width="medium"),
+            "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+            "Detection_State": st.column_config.TextColumn("Detection", width="medium"),
+            "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+            "ML_Daily_PctRank": st.column_config.NumberColumn("ML Daily Rank", format="%.1f%%"),
+            "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+            "Rotation_State": st.column_config.TextColumn("Rotation", width="small"),
+            "Structure_State": st.column_config.TextColumn("Structure", width="medium"),
+            "Structure_History_Status": st.column_config.TextColumn("History", width="medium"),
+            "MA_Breadth_Display": st.column_config.TextColumn("MA Breadth", width="small"),
+            "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+        }
+    )
+
+    st.divider()
+
+    st.subheader("Technology Complex — Current Lifecycle")
+    st.caption(
+        "Peer-context panel for XLK / DRAM / SOXX / SMH. It shows how the technology complex "
+        "is behaving today without creating a new technology score."
+    )
+
+    tech_order = {"XLK": 1, "DRAM": 2, "SOXX": 3, "SMH": 4}
+    tech = wb[wb["Ticker"].isin(tech_order)].copy()
+    tech["_order"] = tech["Ticker"].map(tech_order)
+    tech = tech.sort_values("_order")
+
+    tech_cols = [c for c in [
+        "Ticker", "Lifecycle_Zone", "Decision_Support_State", "Detection_State",
+        "ML_Quality", "Confirmation_State", "Rotation_State", "Structure_State",
+        "MA_Breadth_Display", "Distance_To_MA50"
+    ] if c in tech.columns]
+    tech_display = tech[tech_cols].copy()
+    if "Distance_To_MA50" in tech_display.columns:
+        tech_display["Distance_To_MA50"] = tech_display["Distance_To_MA50"] * 100
+
+    st.dataframe(
+        tech_display,
+        width="stretch",
+        hide_index=True,
+        column_config={
+            "Ticker": st.column_config.TextColumn("Ticker", width="small"),
+            "Lifecycle_Zone": st.column_config.TextColumn("Lifecycle", width="medium"),
+            "Decision_Support_State": st.column_config.TextColumn("Decision Support", width="medium"),
+            "Detection_State": st.column_config.TextColumn("Detection", width="medium"),
+            "ML_Quality": st.column_config.TextColumn("ML Quality", width="medium"),
+            "Confirmation_State": st.column_config.TextColumn("Confirmation", width="medium"),
+            "Rotation_State": st.column_config.TextColumn("Rotation", width="small"),
+            "Structure_State": st.column_config.TextColumn("Structure", width="medium"),
+            "MA_Breadth_Display": st.column_config.TextColumn("MA Breadth", width="small"),
+            "Distance_To_MA50": st.column_config.NumberColumn("% vs MA50", format="%.1f%%"),
+        }
+    )
+
+    st.divider()
+    st.subheader("Historical MA Workbench")
+    st.caption(
+        "Use the historical controls below after the current lifecycle view identifies an asset or group worth investigating."
     )
 
     wide = ma_wide.copy()
