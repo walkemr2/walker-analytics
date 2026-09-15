@@ -2714,94 +2714,94 @@ elif page == "Wide Beach":
 
     st.markdown(
         """
-        <style>
-        .wb-grid {
-            display: grid;
-            grid-template-columns: repeat(6, minmax(0, 1fr));
-            gap: 8px;
-            width: 100%;
-            align-items: stretch;
-            margin: 0.25rem 0 0.75rem 0;
-        }
-        .wb-stage {
-            border: 2px solid rgba(49, 51, 63, 0.45);
-            border-top-width: 7px;
-            border-radius: 8px;
-            padding: 10px 9px 12px 9px;
-            min-height: 255px;
-            background: rgba(250, 250, 250, 0.55);
-        }
-        .wb-stage:nth-child(1),
-        .wb-stage:nth-child(2),
-        .wb-stage:nth-child(3) {
-            border-top-style: solid;
-        }
-        .wb-stage:nth-child(4) {
-            border-top-style: double;
-        }
-        .wb-stage:nth-child(5),
-        .wb-stage:nth-child(6) {
-            border-top-style: dashed;
-        }
-        .wb-stage-number {
-            font-size: 1.35rem;
-            font-weight: 800;
-            line-height: 1;
-            margin-bottom: 5px;
-        }
-        .wb-stage-title {
-            font-size: 0.73rem;
-            font-weight: 800;
-            min-height: 34px;
-            line-height: 1.15;
-        }
-        .wb-stage-count {
-            font-size: 2rem;
-            font-weight: 800;
-            line-height: 1.05;
-            margin-top: 5px;
-        }
-        .wb-stage-line {
-            font-size: 0.72rem;
-            font-weight: 700;
-            margin-top: 4px;
-        }
-        .wb-stage-note {
-            font-size: 0.67rem;
-            opacity: 0.72;
-            min-height: 30px;
-            margin-bottom: 8px;
-        }
-        .wb-tickers {
-            border-top: 1px solid rgba(49, 51, 63, 0.25);
-            padding-top: 8px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 5px;
-            align-content: flex-start;
-        }
-        .wb-ticker {
-            display: inline-block;
-            border: 1px solid rgba(49, 51, 63, 0.42);
-            border-radius: 5px;
-            padding: 2px 5px;
-            font-size: 0.68rem;
-            font-weight: 700;
-            line-height: 1.2;
-            background: rgba(255, 255, 255, 0.72);
-        }
-        .wb-empty {
-            opacity: 0.55;
-            font-size: 0.8rem;
-        }
-        @media (max-width: 1100px) {
-            .wb-grid {
-                grid-template-columns: repeat(3, minmax(0, 1fr));
-            }
-        }
-        </style>
-        <div class="wb-grid">
-        """
+<style>
+.wb-grid {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+    gap: 8px;
+    width: 100%;
+    align-items: stretch;
+    margin: 0.25rem 0 0.75rem 0;
+}
+.wb-stage {
+    border: 2px solid rgba(49, 51, 63, 0.45);
+    border-top-width: 7px;
+    border-radius: 8px;
+    padding: 10px 9px 12px 9px;
+    min-height: 255px;
+    background: rgba(250, 250, 250, 0.55);
+}
+.wb-stage:nth-child(1),
+.wb-stage:nth-child(2),
+.wb-stage:nth-child(3) {
+    border-top-style: solid;
+}
+.wb-stage:nth-child(4) {
+    border-top-style: double;
+}
+.wb-stage:nth-child(5),
+.wb-stage:nth-child(6) {
+    border-top-style: dashed;
+}
+.wb-stage-number {
+    font-size: 1.35rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 5px;
+}
+.wb-stage-title {
+    font-size: 0.73rem;
+    font-weight: 800;
+    min-height: 34px;
+    line-height: 1.15;
+}
+.wb-stage-count {
+    font-size: 2rem;
+    font-weight: 800;
+    line-height: 1.05;
+    margin-top: 5px;
+}
+.wb-stage-line {
+    font-size: 0.72rem;
+    font-weight: 700;
+    margin-top: 4px;
+}
+.wb-stage-note {
+    font-size: 0.67rem;
+    opacity: 0.72;
+    min-height: 30px;
+    margin-bottom: 8px;
+}
+.wb-tickers {
+    border-top: 1px solid rgba(49, 51, 63, 0.25);
+    padding-top: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    align-content: flex-start;
+}
+.wb-ticker {
+    display: inline-block;
+    border: 1px solid rgba(49, 51, 63, 0.42);
+    border-radius: 5px;
+    padding: 2px 5px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+    background: rgba(255, 255, 255, 0.72);
+}
+.wb-empty {
+    opacity: 0.55;
+    font-size: 0.8rem;
+}
+@media (max-width: 1100px) {
+    .wb-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+</style>
+<div class="wb-grid">
+"""
         + "".join(beach_cards)
         + "</div>",
         unsafe_allow_html=True
