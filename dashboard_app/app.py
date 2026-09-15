@@ -4520,6 +4520,88 @@ Only features that improve out-of-sample evidence should be allowed into the pro
 # RESEARCH EVIDENCE
 # ============================================================
 
+
+    st.markdown("---")
+    st.subheader("Wide Beach — Lifecycle Stages")
+    st.write(
+        "The Wide Beach organizes each asset into one current technical lifecycle stage. "
+        "It is designed to answer **where the asset is in its lifecycle now**, not to issue a BUY or SELL instruction."
+    )
+
+    lifecycle_guide = pd.DataFrame(
+        [
+            {
+                "Stage": "① Early Detection",
+                "Meaning": "A fresh lifecycle event has occurred, typically associated with a new EMA20 signal.",
+                "How to Interpret It": "Something changed. This is the earliest investigation stage, not confirmation that a new trend will succeed.",
+            },
+            {
+                "Stage": "② Confirming / Building",
+                "Meaning": "The initial signal is beginning to accumulate supporting evidence.",
+                "How to Interpret It": "The setup is developing. Confirmation, rotation evidence, structure, and ML quality can help distinguish stronger candidates from failed signals.",
+            },
+            {
+                "Stage": "③ Leading",
+                "Meaning": "The asset has established stronger trend / rotation characteristics and supporting structure.",
+                "How to Interpret It": "Leadership is established. The asset has moved beyond early detection into a more mature positive trend state.",
+            },
+            {
+                "Stage": "④ Mature / Extended",
+                "Meaning": "Leadership remains intact, but the move has progressed substantially.",
+                "How to Interpret It": "The trend remains strong, but it is no longer early. This stage emphasizes extension and position-management awareness rather than fresh discovery.",
+            },
+            {
+                "Stage": "⑤ Weakening / Pullback",
+                "Meaning": "Momentum has deteriorated, an EMA20 break or pullback has occurred, or other evidence indicates weakening.",
+                "How to Interpret It": "The trend needs review. This does not automatically mean the longer-term structure has failed; strong prior ML or rotation evidence can remain while the current lifecycle weakens.",
+            },
+            {
+                "Stage": "⑥ Below Structure",
+                "Meaning": "Important structural support has deteriorated or price has moved below the relevant longer-term structure.",
+                "How to Interpret It": "Structural weakness is present. This is materially different from an ordinary pullback and represents the weakest Wide Beach lifecycle state.",
+            },
+        ]
+    )
+
+    st.dataframe(
+        lifecycle_guide,
+        use_container_width=True,
+        hide_index=True,
+        column_config={
+            "Stage": st.column_config.TextColumn("Stage", width="medium"),
+            "Meaning": st.column_config.TextColumn("Meaning", width="large"),
+            "How to Interpret It": st.column_config.TextColumn("How to Interpret It", width="large"),
+        },
+    )
+
+    st.info(
+        "**Important:** The Wide Beach is a lifecycle model, not a BUY / SELL model. "
+        "Assets can move forward or backward through the stages, skip stages, or remain in one stage "
+        "for an extended period. The stage describes current technical condition; it does not predict "
+        "that the next stage must occur."
+    )
+
+    st.markdown("#### Lifecycle Groups")
+    g1, g2, g3 = st.columns(3)
+    with g1:
+        st.markdown("**Stages 1–3 — Constructive Side**")
+        st.caption("Detection through established leadership.")
+    with g2:
+        st.markdown("**Stage 4 — Mature / Transition Zone**")
+        st.caption("Strong trend, but increasingly mature or extended.")
+    with g3:
+        st.markdown("**Stages 5–6 — Weak Side**")
+        st.caption("Pullback / weakening through structural deterioration.")
+
+    st.markdown("#### Lifecycle Stage vs. ML Quality")
+    st.write(
+        "These are separate layers of evidence. **Lifecycle stage** describes what has happened to the "
+        "asset's technical condition since detection. **ML quality** describes the historical quality "
+        "of the detected opportunity based on the model evidence available for that signal. "
+        "An asset can therefore retain strong prior ML evidence while currently occupying "
+        "⑤ Weakening / Pullback. One layer should not overwrite the other."
+    )
+
 elif page == "Research Evidence":
 
     st.header("Research Evidence & Findings")
