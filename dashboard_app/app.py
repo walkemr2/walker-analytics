@@ -2693,17 +2693,17 @@ elif page == "Wide Beach":
             for ticker in tickers_here
         ) or '<span class="wb-empty">—</span>'
 
+        # Keep generated HTML flush-left/minified. Markdown treats lines
+        # beginning with four spaces as literal code, even when HTML is allowed.
         beach_cards.append(
-            f"""
-            <div class="wb-stage">
-                <div class="wb-stage-number">{symbol}</div>
-                <div class="wb-stage-title">{_html_escape(lifecycle_short[zone])}</div>
-                <div class="wb-stage-count">{len(tickers_here)}</div>
-                <div class="wb-stage-line">{_html_escape(stage_line)}</div>
-                <div class="wb-stage-note">{_html_escape(interpretation)}</div>
-                <div class="wb-tickers">{ticker_html}</div>
-            </div>
-            """
+            f'<div class="wb-stage">'
+            f'<div class="wb-stage-number">{symbol}</div>'
+            f'<div class="wb-stage-title">{_html_escape(lifecycle_short[zone])}</div>'
+            f'<div class="wb-stage-count">{len(tickers_here)}</div>'
+            f'<div class="wb-stage-line">{_html_escape(stage_line)}</div>'
+            f'<div class="wb-stage-note">{_html_escape(interpretation)}</div>'
+            f'<div class="wb-tickers">{ticker_html}</div>'
+            f'</div>'
         )
 
     st.markdown("#### Lifecycle Flow")
@@ -2800,8 +2800,7 @@ elif page == "Wide Beach":
     }
 }
 </style>
-<div class="wb-grid">
-"""
+<div class="wb-grid">"""
         + "".join(beach_cards)
         + "</div>",
         unsafe_allow_html=True
