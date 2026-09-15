@@ -2603,17 +2603,209 @@ elif page == "Wide Beach":
     }
 
     counts = wb["Lifecycle_Zone"].value_counts().reindex(lifecycle_order, fill_value=0)
-    beach_cols = st.columns(6)
-    for idx, zone in enumerate(lifecycle_order):
-        beach_cols[idx].metric(lifecycle_short[zone], int(counts.loc[zone]))
+
+    # --------------------------------------------------------
+    # STEP 34B.1 — GRAPHICAL WIDE BEACH
+    # Position, labels, counts, symbols, and borders carry the
+    # meaning. Color is supplemental only.
+    # --------------------------------------------------------
+
+    total_assets = int(wb["Ticker"].nunique())
+    constructive_count = int(
+        counts.loc["1 — EARLY DETECTION"]
+        + counts.loc["2 — CONFIRMING / BUILDING"]
+        + counts.loc["3 — LEADING"]
+    )
+    mature_count = int(counts.loc["4 — MATURE / EXTENDED"])
+    weak_count = int(
+        counts.loc["5 — WEAKENING / PULLBACK"]
+        + counts.loc["6 — BELOW STRUCTURE"]
+    )
+
+    constructive_pct = (constructive_count / total_assets * 100) if total_assets else 0.0
+    weak_pct = (weak_count / total_assets * 100) if total_assets else 0.0
+
+    b1, b2, b3 = st.columns(3)
+    b1.metric(
+        "Constructive Side · Stages 1–3",
+        f"{constructive_count} / {total_assets}",
+        f"{constructive_pct:.0f}% of universe",
+        delta_color="off"
+    )
+    b2.metric(
+        "Mature / Extended · Stage 4",
+        f"{mature_count} / {total_assets}",
+        "Transition zone",
+        delta_color="off"
+    )
+    b3.metric(
+        "Weak Side · Stages 5–6",
+        f"{weak_count} / {total_assets}",
+        f"{weak_pct:.0f}% of universe",
+        delta_color="off"
+    )
+
+    if weak_count > constructive_count:
+        st.warning(
+            f"Current breadth is concentrated on the weak side of the lifecycle: "
+            f"{weak_count} of {total_assets} assets ({weak_pct:.0f}%) are in "
+            f"Weakening / Pullback or Below Structure, versus "
+            f"{constructive_count} ({constructive_pct:.0f}%) in Early Detection through Leading. "
+            f"This is descriptive breadth context, not a market-timing instruction."
+        )
+    else:
+        st.info(
+            f"Current breadth has {constructive_count} of {total_assets} assets "
+            f"({constructive_pct:.0f}%) in Early Detection through Leading and "
+            f"{weak_count} ({weak_pct:.0f}%) in Weakening / Pullback or Below Structure. "
+            f"This is descriptive breadth context, not a market-timing instruction."
+        )
+
+    stage_meta = {
+        "1 — EARLY DETECTION": ("①", "Fresh signal", "New lifecycle event"),
+        "2 — CONFIRMING / BUILDING": ("②", "Building evidence", "Early confirmation"),
+        "3 — LEADING": ("③", "Leadership", "Confirmed strength"),
+        "4 — MATURE / EXTENDED": ("④", "Mature trend", "Watch extension"),
+        "5 — WEAKENING / PULLBACK": ("⑤", "Losing momentum", "Review structure"),
+        "6 — BELOW STRUCTURE": ("⑥", "Structural weakness", "Below key structure"),
+    }
+
+    def _html_escape(value):
+        return (
+            str(value)
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace('"', "&quot;")
+        )
+
+    beach_cards = []
+    for zone in lifecycle_order:
+        symbol, stage_line, interpretation = stage_meta[zone]
+        tickers_here = (
+            wb.loc[wb["Lifecycle_Zone"] == zone, "Ticker"]
+            .dropna()
+            .astype(str)
+            .tolist()
+        )
+        ticker_html = "".join(
+            f'<span class="wb-ticker">{_html_escape(ticker)}</span>'
+            for ticker in tickers_here
+        ) or '<span class="wb-empty">—</span>'
+
+        beach_cards.append(
+            f"""
+            <div class="wb-stage">
+                <div class="wb-stage-number">{symbol}</div>
+                <div class="wb-stage-title">{_html_escape(lifecycle_short[zone])}</div>
+                <div class="wb-stage-count">{len(tickers_here)}</div>
+                <div class="wb-stage-line">{_html_escape(stage_line)}</div>
+                <div class="wb-stage-note">{_html_escape(interpretation)}</div>
+                <div class="wb-tickers">{ticker_html}</div>
+            </div>
+            """
+        )
 
     st.markdown("#### Lifecycle Flow")
-    for zone in lifecycle_order:
-        tickers_here = wb.loc[wb["Lifecycle_Zone"] == zone, "Ticker"].astype(str).tolist()
-        ticker_text = ", ".join(tickers_here) if tickers_here else "—"
-        st.markdown(f"**{lifecycle_short[zone]} ({len(tickers_here)})** — {ticker_text}")
-        if zone != lifecycle_order[-1]:
-            st.markdown("↓")
+    st.caption(
+        "Read left → right. Each asset occupies one current lifecycle stage. "
+        "Ticker position and stage labels carry the meaning even without color."
+    )
+
+    st.markdown(
+        """
+        <style>
+        .wb-grid {
+            display: grid;
+            grid-template-columns: repeat(6, minmax(0, 1fr));
+            gap: 8px;
+            width: 100%;
+            align-items: stretch;
+            margin: 0.25rem 0 0.75rem 0;
+        }
+        .wb-stage {
+            border: 2px solid rgba(49, 51, 63, 0.45);
+            border-top-width: 7px;
+            border-radius: 8px;
+            padding: 10px 9px 12px 9px;
+            min-height: 255px;
+            background: rgba(250, 250, 250, 0.55);
+        }
+        .wb-stage:nth-child(1),
+        .wb-stage:nth-child(2),
+        .wb-stage:nth-child(3) {
+            border-top-style: solid;
+        }
+        .wb-stage:nth-child(4) {
+            border-top-style: double;
+        }
+        .wb-stage:nth-child(5),
+        .wb-stage:nth-child(6) {
+            border-top-style: dashed;
+        }
+        .wb-stage-number {
+            font-size: 1.35rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 5px;
+        }
+        .wb-stage-title {
+            font-size: 0.73rem;
+            font-weight: 800;
+            min-height: 34px;
+            line-height: 1.15;
+        }
+        .wb-stage-count {
+            font-size: 2rem;
+            font-weight: 800;
+            line-height: 1.05;
+            margin-top: 5px;
+        }
+        .wb-stage-line {
+            font-size: 0.72rem;
+            font-weight: 700;
+            margin-top: 4px;
+        }
+        .wb-stage-note {
+            font-size: 0.67rem;
+            opacity: 0.72;
+            min-height: 30px;
+            margin-bottom: 8px;
+        }
+        .wb-tickers {
+            border-top: 1px solid rgba(49, 51, 63, 0.25);
+            padding-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            align-content: flex-start;
+        }
+        .wb-ticker {
+            display: inline-block;
+            border: 1px solid rgba(49, 51, 63, 0.42);
+            border-radius: 5px;
+            padding: 2px 5px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            line-height: 1.2;
+            background: rgba(255, 255, 255, 0.72);
+        }
+        .wb-empty {
+            opacity: 0.55;
+            font-size: 0.8rem;
+        }
+        @media (max-width: 1100px) {
+            .wb-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        </style>
+        <div class="wb-grid">
+        """
+        + "".join(beach_cards)
+        + "</div>",
+        unsafe_allow_html=True
+    )
 
     st.info(
         "Wide Beach is a lifecycle / structure view, not a BUY / SELL engine. "
