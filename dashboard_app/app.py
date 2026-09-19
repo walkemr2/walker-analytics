@@ -41,6 +41,14 @@ PEER_RELATIVE_FILE = DATA_DIR / "web_peer_relative_snapshot.csv"
 PEER_GROUP_FILE = DATA_DIR / "web_peer_group_summary.csv"
 VERTICAL_HIERARCHY_FILE = DATA_DIR / "web_vertical_hierarchy_snapshot.csv"
 HIERARCHY_LEVEL_FILE = DATA_DIR / "web_hierarchy_level_summary.csv"
+
+# News Catalyst Layer (37C/37D)
+CATALYST_MAP_FILE = DATA_DIR / "catalyst_event_asset_map.csv"
+CATALYST_CONTEXT_FILE = DATA_DIR / "catalyst_mapper_contextual_audit.csv"
+CATALYST_TEST_FILE = DATA_DIR / "catalyst_mapper_test_results.csv"
+CATALYST_EVENTS_FILE = DATA_DIR / "web_catalyst_events.csv"
+CATALYST_SIGNALS_FILE = DATA_DIR / "web_catalyst_asset_signals.csv"
+CATALYST_STATUS_FILE = DATA_DIR / "web_catalyst_status.csv"
 # ============================================================
 # LOAD DATA
 # ============================================================
@@ -86,6 +94,7 @@ page = st.sidebar.radio(
         "Asset Explorer",
         "Early Rotation",
         "Rotation Analysis",
+        "Catalyst Intelligence",
         "User Guide",
         "Research Evidence",
         "Methodology"
@@ -4601,6 +4610,149 @@ Only features that improve out-of-sample evidence should be allowed into the pro
         "An asset can therefore retain strong prior ML evidence while currently occupying "
         "⑤ Weakening / Pullback. One layer should not overwrite the other."
     )
+
+elif page == "Catalyst Intelligence":
+
+    st.header("Catalyst Intelligence")
+    st.caption(
+        "Forward-looking financial catalyst evidence layered beside Walker Analytics technical, "
+        "flow, hierarchy, and ML evidence. Catalyst relationships are decision support—not trade instructions."
+    )
+
+    def _safe_csv(path):
+        try:
+            return pd.read_csv(path) if path.exists() else pd.DataFrame()
+        except Exception:
+            return pd.DataFrame()
+
+    catalyst_map = _safe_csv(CATALYST_MAP_FILE)
+    catalyst_context = _safe_csv(CATALYST_CONTEXT_FILE)
+    catalyst_tests = _safe_csv(CATALYST_TEST_FILE)
+    catalyst_events = _safe_csv(CATALYST_EVENTS_FILE)
+    catalyst_signals = _safe_csv(CATALYST_SIGNALS_FILE)
+    catalyst_status = _safe_csv(CATALYST_STATUS_FILE)
+
+    if catalyst_map.empty:
+        st.warning(
+            "Catalyst mapping data is not available yet. Copy catalyst_event_asset_map.csv into "
+            "data_processed and refresh the app."
+        )
+    else:
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Mapped Event Categories", int(catalyst_map["Event_Category_Code"].nunique()))
+        c2.metric("Mapped Assets", int(catalyst_map["Ticker"].nunique()))
+        c3.metric("Primary Relationships", int((catalyst_map["Exposure_Class"] == "Primary").sum()))
+        c4.metric("Transmission Relationships", int((catalyst_map["Exposure_Class"] == "Transmission").sum()))
+
+        if not catalyst_tests.empty and "Pass" in catalyst_tests.columns:
+            passed = catalyst_tests["Pass"].astype(str).str.lower().eq("true").sum()
+            total = len(catalyst_tests)
+            st.success(f"37C precision mapper validation: {passed}/{total} synthetic tests passed.")
+
+        st.divider()
+        st.subheader("Morning Catalyst Monitor")
+        st.caption(
+            "What changed in financial markets or the world that could cause capital to move, "
+            "which Walker Analytics assets are exposed, and is the market beginning to confirm it?"
+        )
+
+        if not catalyst_status.empty:
+            latest_status = catalyst_status.iloc[-1]
+            status_text = str(latest_status.get("Status", "")).upper()
+            status_message = str(latest_status.get("Message", ""))
+            refreshed_at = str(latest_status.get("Refreshed_At", ""))
+            raw_count = latest_status.get("Raw_Articles", 0)
+            event_count = latest_status.get("Normalized_Events", 0)
+            signal_count = latest_status.get("Asset_Signals", 0)
+            s1, s2, s3 = st.columns(3)
+            s1.metric("Articles Scanned", int(raw_count) if pd.notna(raw_count) else 0)
+            s2.metric("Catalyst Events", int(event_count) if pd.notna(event_count) else 0)
+            s3.metric("Asset Signals", int(signal_count) if pd.notna(signal_count) else 0)
+            if status_text == "OK":
+                st.success(f"Live news ingestion healthy. Last refresh: {refreshed_at}")
+            else:
+                st.warning(f"Latest news refresh reported: {status_message}. Previous good outputs are preserved when available.")
+
+        if catalyst_events.empty:
+            st.info(
+                "No normalized catalyst events are currently available. This can mean the latest news window contained "
+                "no high-confidence matches, or the live refresh has not run yet."
+            )
+        else:
+            events_view = catalyst_events.copy()
+            if "Published_At" in events_view.columns:
+                events_view = events_view.sort_values("Published_At", ascending=False)
+            preferred = [c for c in [
+                "Published_At", "Event_Category_Code", "Headline", "Direction", "Magnitude",
+                "Persistence", "Confidence", "Classification_Evidence", "Source_Name", "Source_URL"
+            ] if c in events_view.columns]
+            if preferred:
+                events_view = events_view[preferred]
+            st.dataframe(
+                events_view, width="stretch", hide_index=True,
+                column_config={"Source_URL": st.column_config.LinkColumn("Source")}
+            )
+
+        st.divider()
+        st.subheader("Event → Asset Exposure Map")
+
+        event_options = sorted(catalyst_map["Event_Category_Code"].dropna().astype(str).unique().tolist())
+        selected_event = st.selectbox("Event category", event_options, key="catalyst_event_category")
+        event_map = catalyst_map[catalyst_map["Event_Category_Code"] == selected_event].copy()
+
+        class_order = {"Primary": 0, "Transmission": 1}
+        event_map["_order"] = event_map["Exposure_Class"].map(class_order).fillna(9)
+        event_map = event_map.sort_values(["_order", "Exposure_Score", "Ticker"], ascending=[True, False, True])
+        show_cols = [c for c in [
+            "Ticker", "Exposure_Class", "Exposure_Score", "Sector", "Peer_Group",
+            "Exposure_Reason", "Matched_37A_Terms", "Matched_Asset_Drivers", "Evidence"
+        ] if c in event_map.columns]
+        st.dataframe(event_map[show_cols], width="stretch", hide_index=True)
+
+        st.divider()
+        st.subheader("Asset Catalyst Profile")
+        tickers = sorted(catalyst_map["Ticker"].dropna().astype(str).unique().tolist())
+        selected_catalyst_ticker = st.selectbox("Asset", tickers, key="catalyst_ticker")
+        asset_map = catalyst_map[catalyst_map["Ticker"] == selected_catalyst_ticker].copy()
+        asset_map = asset_map.sort_values(["Exposure_Class", "Event_Category_Code"])
+        asset_cols = [c for c in [
+            "Event_Category_Code", "Event_Family", "Event_Category_Name", "Exposure_Class",
+            "Exposure_Score", "Exposure_Reason", "Matched_37A_Terms", "Evidence"
+        ] if c in asset_map.columns]
+        st.dataframe(asset_map[asset_cols], width="stretch", hide_index=True)
+
+        if not catalyst_signals.empty and "Ticker" in catalyst_signals.columns:
+            live_asset = catalyst_signals[catalyst_signals["Ticker"].astype(str) == selected_catalyst_ticker]
+            if not live_asset.empty:
+                st.markdown("#### Current Catalyst Evidence")
+                st.dataframe(live_asset, width="stretch", hide_index=True)
+
+        with st.expander("Contextual relationships — research/audit only"):
+            st.caption(
+                "These weaker relationships are intentionally quarantined. They are not surfaced as current "
+                "asset exposure unless later event context establishes a valid transmission path."
+            )
+            if catalyst_context.empty:
+                st.write("No contextual audit file available.")
+            else:
+                context_asset = catalyst_context[
+                    catalyst_context["Ticker"].astype(str) == selected_catalyst_ticker
+                ].copy()
+                context_cols = [c for c in [
+                    "Event_Category_Code", "Event_Category_Name", "Exposure_Score",
+                    "Exposure_Reason", "Matched_37A_Terms", "Evidence"
+                ] if c in context_asset.columns]
+                st.dataframe(context_asset[context_cols], width="stretch", hide_index=True)
+
+        st.divider()
+        st.subheader("How to Read This Layer")
+        st.markdown(
+            "**Primary** = direct economic exposure.  \n"
+            "**Transmission** = a defined secondary financial pathway.  \n"
+            "**Contextual** = plausible but intentionally quarantined until event-specific evidence supports it.  \n\n"
+            "The intended operating sequence is **Catalyst → Asset Exposure → Technical/Flow Confirmation → Decision Support**. "
+            "Catalyst evidence does not overwrite lifecycle stage, ML quality, moving-average structure, or rotation evidence."
+        )
 
 elif page == "Research Evidence":
 
