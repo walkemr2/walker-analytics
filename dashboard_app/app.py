@@ -4615,15 +4615,35 @@ elif page == "Catalyst Intelligence":
 
     st.header("Catalyst Intelligence")
     st.caption(
-        "Forward-looking financial catalyst evidence layered beside Walker Analytics technical, "
-        "flow, hierarchy, and ML evidence. Catalyst relationships are decision support—not trade instructions."
+        "Forward-looking financial catalyst evidence layered beside Walker Analytics technical, flow, hierarchy, and ML evidence. "
+        "Catalyst relationships are decision support—not trade instructions."
     )
 
     def _safe_csv(path):
-        try:
-            return pd.read_csv(path) if path.exists() else pd.DataFrame()
-        except Exception:
+        return pd.read_csv(path) if path.exists() else pd.DataFrame()
+
+    def _as_bool(series):
+        return series.astype(str).str.lower().isin(["true", "1", "yes"])
+
+    def _ticker_list(frame, exposure_class):
+        if frame.empty or "Exposure_Class" not in frame.columns or "Ticker" not in frame.columns:
+            return []
+        return sorted(frame.loc[frame["Exposure_Class"].astype(str) == exposure_class, "Ticker"].dropna().astype(str).unique().tolist())
+
+    def _walker_confirmation(tickers):
+        if not tickers or decision.empty or "Ticker" not in decision.columns:
             return pd.DataFrame()
+        cols = [c for c in [
+            "Ticker", "Decision_Support_State", "Detection_State", "Signal_Window",
+            "ML_Quality", "ML_Daily_PctRank", "Confirmation_State", "Rotation_State",
+            "Structure_State", "Early_Rotation_State", "Momentum_Score",
+            "Rotation_Readiness_Score", "Distance_To_MA50"
+        ] if c in decision.columns]
+        q = decision[decision["Ticker"].astype(str).isin(tickers)][cols].copy()
+        if "ML_Daily_PctRank" in q.columns:
+            q["ML_Daily_PctRank"] = pd.to_numeric(q["ML_Daily_PctRank"], errors="coerce")
+            q = q.sort_values("ML_Daily_PctRank", ascending=False, na_position="last")
+        return q
 
     catalyst_map = _safe_csv(CATALYST_MAP_FILE)
     catalyst_context = _safe_csv(CATALYST_CONTEXT_FILE)
@@ -4638,6 +4658,137 @@ elif page == "Catalyst Intelligence":
             "data_processed and refresh the app."
         )
     else:
+        # The live decision-support surface comes first. Mapping/configuration metrics are secondary.
+        st.subheader("Morning Catalyst Monitor")
+        st.caption(
+            "What changed? Why does it matter financially? Which Walker assets are exposed? "
+            "Could the catalyst persist, and is Walker quantitative evidence beginning to confirm it?"
+        )
+
+        if not catalyst_status.empty:
+            latest_status = catalyst_status.iloc[-1]
+            status_text = str(latest_status.get("Status", "")).upper()
+            status_message = str(latest_status.get("Message", ""))
+            refreshed_at = str(latest_status.get("Refreshed_At", ""))
+            raw_count = latest_status.get("Raw_Articles", 0)
+            event_count = latest_status.get("Normalized_Events", 0)
+            signal_count = latest_status.get("Asset_Signals", 0)
+            eligible_count = 0
+            if not catalyst_events.empty and "Monitor_Eligible" in catalyst_events.columns:
+                eligible_count = int(_as_bool(catalyst_events["Monitor_Eligible"]).sum())
+            s1, s2, s3, s4 = st.columns(4)
+            s1.metric("Articles Scanned", int(raw_count) if pd.notna(raw_count) else 0)
+            s2.metric("Normalized Events", int(event_count) if pd.notna(event_count) else 0)
+            s3.metric("Morning Monitor", eligible_count)
+            s4.metric("Mapped Signals", int(signal_count) if pd.notna(signal_count) else 0)
+            if status_text == "OK":
+                st.success(f"Live news ingestion healthy. Last refresh: {refreshed_at}")
+            else:
+                st.warning(f"Latest news refresh reported: {status_message}. Previous good outputs are preserved when available.")
+
+        if catalyst_events.empty:
+            st.info("No normalized catalyst events are currently available.")
+        else:
+            live_events = catalyst_events.copy()
+            if "Monitor_Eligible" in live_events.columns:
+                live_events = live_events[_as_bool(live_events["Monitor_Eligible"])].copy()
+            if "Published_At" in live_events.columns:
+                live_events["_published"] = pd.to_datetime(live_events["Published_At"], errors="coerce", utc=True)
+            if "Relevance_Score" in live_events.columns:
+                live_events["_relevance"] = pd.to_numeric(live_events["Relevance_Score"], errors="coerce")
+                sort_cols = [c for c in ["_relevance", "_published"] if c in live_events.columns]
+                if sort_cols:
+                    live_events = live_events.sort_values(sort_cols, ascending=False, na_position="last")
+            elif "_published" in live_events.columns:
+                live_events = live_events.sort_values("_published", ascending=False)
+
+            if live_events.empty:
+                st.info(
+                    "News was normalized for audit, but no event passed the Morning Monitor financial-relevance gate. "
+                    "Use the audit section below to inspect quarantined events."
+                )
+            else:
+                for _, event in live_events.head(10).iterrows():
+                    event_id = str(event.get("Event_ID", ""))
+                    code = str(event.get("Event_Category_Code", ""))
+                    direction = str(event.get("Direction", "Neutral"))
+                    magnitude = str(event.get("Magnitude", ""))
+                    persistence = str(event.get("Persistence", ""))
+                    headline = str(event.get("Headline", ""))
+                    summary = str(event.get("Event_Summary", ""))
+                    why = str(event.get("Why_It_Matters", ""))
+                    watch = str(event.get("Confirmation_Watch", ""))
+                    relevance = event.get("Relevance_Score", "")
+                    confidence_v = event.get("Confidence", "")
+                    source_name = str(event.get("Source_Name", ""))
+                    source_url = str(event.get("Source_URL", ""))
+
+                    event_signals = catalyst_signals[catalyst_signals["Event_ID"].astype(str) == event_id].copy() if (not catalyst_signals.empty and "Event_ID" in catalyst_signals.columns) else pd.DataFrame()
+                    primary = _ticker_list(event_signals, "Primary")
+                    transmission = _ticker_list(event_signals, "Transmission")
+                    all_tickers = sorted(set(primary + transmission))
+
+                    with st.container(border=True):
+                        st.markdown(f"### {code.replace('_', ' ').title()} — {direction} | {magnitude} Magnitude | {persistence} Persistence")
+                        st.markdown(f"**What changed:** {headline}")
+                        if summary and summary.lower() != "nan":
+                            st.write(summary)
+                        st.markdown(f"**Primary exposure:** {', '.join(primary) if primary else 'None'}")
+                        st.markdown(f"**Transmission exposure:** {', '.join(transmission) if transmission else 'None'}")
+                        st.markdown(f"**Why it matters:** {why}")
+                        st.markdown(f"**What to watch for confirmation:** {watch}")
+
+                        confirmation = _walker_confirmation(all_tickers)
+                        if confirmation.empty:
+                            st.caption("Walker confirmation: no matching quantitative rows are currently available for the mapped assets.")
+                        else:
+                            st.markdown("**Walker quantitative confirmation / disagreement**")
+                            show_confirmation = [c for c in [
+                                "Ticker", "Decision_Support_State", "ML_Quality", "ML_Daily_PctRank",
+                                "Confirmation_State", "Rotation_State", "Structure_State",
+                                "Early_Rotation_State", "Rotation_Readiness_Score"
+                            ] if c in confirmation.columns]
+                            st.dataframe(confirmation[show_confirmation].head(10), width="stretch", hide_index=True)
+
+                        detail_label = f"Evidence & traceability — relevance {relevance} | confidence {confidence_v}"
+                        with st.expander(detail_label):
+                            st.write(f"Classification evidence: {event.get('Classification_Evidence', '')}")
+                            st.write(f"Relevance gate: {event.get('Gate_Reasons', '')}")
+                            if source_url and source_url.lower() != "nan":
+                                st.markdown(f"Source: [{source_name or 'Open article'}]({source_url})")
+                            if not event_signals.empty:
+                                trace_cols = [c for c in [
+                                    "Ticker", "Exposure_Class", "Exposure_Score", "Exposure_Reason",
+                                    "Matched_37A_Terms", "Matched_Asset_Drivers", "Evidence"
+                                ] if c in event_signals.columns]
+                                st.dataframe(event_signals[trace_cols], width="stretch", hide_index=True)
+
+        st.divider()
+        with st.expander("Normalized event audit — includes events withheld from Morning Monitor"):
+            st.caption(
+                "This is the diagnostic/history layer. An event can be correctly normalized yet intentionally withheld "
+                "from the primary decision-support surface when its financial relevance is too weak."
+            )
+            if catalyst_events.empty:
+                st.write("No normalized events available.")
+            else:
+                audit = catalyst_events.copy()
+                if "Published_At" in audit.columns:
+                    audit = audit.sort_values("Published_At", ascending=False)
+                audit_cols = [c for c in [
+                    "Published_At", "Event_Category_Code", "Headline", "Direction", "Magnitude", "Persistence",
+                    "Confidence", "Relevance_Score", "Monitor_Eligible", "Gate_Reasons",
+                    "Classification_Evidence", "Source_Name", "Source_URL"
+                ] if c in audit.columns]
+                st.dataframe(
+                    audit[audit_cols], width="stretch", hide_index=True,
+                    column_config={"Source_URL": st.column_config.LinkColumn("Source")}
+                )
+
+        st.divider()
+        st.subheader("Catalyst Research & Traceability")
+        st.caption("Configuration, mapping, and audit detail are preserved here without dominating the Morning Monitor.")
+
         c1, c2, c3, c4 = st.columns(4)
         c1.metric("Mapped Event Categories", int(catalyst_map["Event_Category_Code"].nunique()))
         c2.metric("Mapped Assets", int(catalyst_map["Ticker"].nunique()))
@@ -4649,83 +4800,39 @@ elif page == "Catalyst Intelligence":
             total = len(catalyst_tests)
             st.success(f"37C precision mapper validation: {passed}/{total} synthetic tests passed.")
 
-        st.divider()
-        st.subheader("Morning Catalyst Monitor")
-        st.caption(
-            "What changed in financial markets or the world that could cause capital to move, "
-            "which Walker Analytics assets are exposed, and is the market beginning to confirm it?"
-        )
+        with st.expander("Event → Asset Exposure Map"):
+            event_options = sorted(catalyst_map["Event_Category_Code"].dropna().astype(str).unique().tolist())
+            selected_event = st.selectbox("Event category", event_options, key="catalyst_event_category")
+            event_map = catalyst_map[catalyst_map["Event_Category_Code"] == selected_event].copy()
+            class_order = {"Primary": 0, "Transmission": 1}
+            event_map["_order"] = event_map["Exposure_Class"].map(class_order).fillna(9)
+            event_map = event_map.sort_values(["_order", "Exposure_Score", "Ticker"], ascending=[True, False, True])
+            show_cols = [c for c in [
+                "Ticker", "Exposure_Class", "Exposure_Score", "Sector", "Peer_Group",
+                "Exposure_Reason", "Matched_37A_Terms", "Matched_Asset_Drivers", "Evidence"
+            ] if c in event_map.columns]
+            st.dataframe(event_map[show_cols], width="stretch", hide_index=True)
 
-        if not catalyst_status.empty:
-            latest_status = catalyst_status.iloc[-1]
-            status_text = str(latest_status.get("Status", "")).upper()
-            status_message = str(latest_status.get("Message", ""))
-            refreshed_at = str(latest_status.get("Refreshed_At", ""))
-            raw_count = latest_status.get("Raw_Articles", 0)
-            event_count = latest_status.get("Normalized_Events", 0)
-            signal_count = latest_status.get("Asset_Signals", 0)
-            s1, s2, s3 = st.columns(3)
-            s1.metric("Articles Scanned", int(raw_count) if pd.notna(raw_count) else 0)
-            s2.metric("Catalyst Events", int(event_count) if pd.notna(event_count) else 0)
-            s3.metric("Asset Signals", int(signal_count) if pd.notna(signal_count) else 0)
-            if status_text == "OK":
-                st.success(f"Live news ingestion healthy. Last refresh: {refreshed_at}")
-            else:
-                st.warning(f"Latest news refresh reported: {status_message}. Previous good outputs are preserved when available.")
-
-        if catalyst_events.empty:
-            st.info(
-                "No normalized catalyst events are currently available. This can mean the latest news window contained "
-                "no high-confidence matches, or the live refresh has not run yet."
-            )
-        else:
-            events_view = catalyst_events.copy()
-            if "Published_At" in events_view.columns:
-                events_view = events_view.sort_values("Published_At", ascending=False)
-            preferred = [c for c in [
-                "Published_At", "Event_Category_Code", "Headline", "Direction", "Magnitude",
-                "Persistence", "Confidence", "Classification_Evidence", "Source_Name", "Source_URL"
-            ] if c in events_view.columns]
-            if preferred:
-                events_view = events_view[preferred]
-            st.dataframe(
-                events_view, width="stretch", hide_index=True,
-                column_config={"Source_URL": st.column_config.LinkColumn("Source")}
-            )
-
-        st.divider()
-        st.subheader("Event → Asset Exposure Map")
-
-        event_options = sorted(catalyst_map["Event_Category_Code"].dropna().astype(str).unique().tolist())
-        selected_event = st.selectbox("Event category", event_options, key="catalyst_event_category")
-        event_map = catalyst_map[catalyst_map["Event_Category_Code"] == selected_event].copy()
-
-        class_order = {"Primary": 0, "Transmission": 1}
-        event_map["_order"] = event_map["Exposure_Class"].map(class_order).fillna(9)
-        event_map = event_map.sort_values(["_order", "Exposure_Score", "Ticker"], ascending=[True, False, True])
-        show_cols = [c for c in [
-            "Ticker", "Exposure_Class", "Exposure_Score", "Sector", "Peer_Group",
-            "Exposure_Reason", "Matched_37A_Terms", "Matched_Asset_Drivers", "Evidence"
-        ] if c in event_map.columns]
-        st.dataframe(event_map[show_cols], width="stretch", hide_index=True)
-
-        st.divider()
-        st.subheader("Asset Catalyst Profile")
-        tickers = sorted(catalyst_map["Ticker"].dropna().astype(str).unique().tolist())
-        selected_catalyst_ticker = st.selectbox("Asset", tickers, key="catalyst_ticker")
-        asset_map = catalyst_map[catalyst_map["Ticker"] == selected_catalyst_ticker].copy()
-        asset_map = asset_map.sort_values(["Exposure_Class", "Event_Category_Code"])
-        asset_cols = [c for c in [
-            "Event_Category_Code", "Event_Family", "Event_Category_Name", "Exposure_Class",
-            "Exposure_Score", "Exposure_Reason", "Matched_37A_Terms", "Evidence"
-        ] if c in asset_map.columns]
-        st.dataframe(asset_map[asset_cols], width="stretch", hide_index=True)
-
-        if not catalyst_signals.empty and "Ticker" in catalyst_signals.columns:
-            live_asset = catalyst_signals[catalyst_signals["Ticker"].astype(str) == selected_catalyst_ticker]
-            if not live_asset.empty:
-                st.markdown("#### Current Catalyst Evidence")
-                st.dataframe(live_asset, width="stretch", hide_index=True)
+        with st.expander("Asset Catalyst Profile & Current Evidence"):
+            tickers = sorted(catalyst_map["Ticker"].dropna().astype(str).unique().tolist())
+            selected_catalyst_ticker = st.selectbox("Asset", tickers, key="catalyst_ticker")
+            asset_map = catalyst_map[catalyst_map["Ticker"] == selected_catalyst_ticker].copy()
+            asset_map = asset_map.sort_values(["Exposure_Class", "Event_Category_Code"])
+            asset_cols = [c for c in [
+                "Event_Category_Code", "Event_Family", "Event_Category_Name", "Exposure_Class",
+                "Exposure_Score", "Exposure_Reason", "Matched_37A_Terms", "Evidence"
+            ] if c in asset_map.columns]
+            st.dataframe(asset_map[asset_cols], width="stretch", hide_index=True)
+            if not catalyst_signals.empty and "Ticker" in catalyst_signals.columns:
+                live_asset = catalyst_signals[catalyst_signals["Ticker"].astype(str) == selected_catalyst_ticker]
+                if not live_asset.empty:
+                    st.markdown("#### Current Catalyst Evidence")
+                    live_cols = [c for c in [
+                        "Published_At", "Event_Category_Code", "Headline", "Direction", "Magnitude",
+                        "Persistence", "Confidence", "Relevance_Score", "Monitor_Eligible", "Source_URL"
+                    ] if c in live_asset.columns]
+                    st.dataframe(live_asset[live_cols], width="stretch", hide_index=True,
+                                 column_config={"Source_URL": st.column_config.LinkColumn("Source")})
 
         with st.expander("Contextual relationships — research/audit only"):
             st.caption(
@@ -4735,24 +4842,16 @@ elif page == "Catalyst Intelligence":
             if catalyst_context.empty:
                 st.write("No contextual audit file available.")
             else:
-                context_asset = catalyst_context[
-                    catalyst_context["Ticker"].astype(str) == selected_catalyst_ticker
-                ].copy()
-                context_cols = [c for c in [
-                    "Event_Category_Code", "Event_Category_Name", "Exposure_Score",
-                    "Exposure_Reason", "Matched_37A_Terms", "Evidence"
-                ] if c in context_asset.columns]
-                st.dataframe(context_asset[context_cols], width="stretch", hide_index=True)
+                st.dataframe(catalyst_context, width="stretch", hide_index=True)
 
-        st.divider()
-        st.subheader("How to Read This Layer")
-        st.markdown(
-            "**Primary** = direct economic exposure.  \n"
-            "**Transmission** = a defined secondary financial pathway.  \n"
-            "**Contextual** = plausible but intentionally quarantined until event-specific evidence supports it.  \n\n"
-            "The intended operating sequence is **Catalyst → Asset Exposure → Technical/Flow Confirmation → Decision Support**. "
-            "Catalyst evidence does not overwrite lifecycle stage, ML quality, moving-average structure, or rotation evidence."
-        )
+        with st.expander("How to Read This Layer"):
+            st.markdown(
+                "**Primary** = direct economic exposure.  \n"
+                "**Transmission** = a defined secondary financial pathway.  \n"
+                "**Contextual** = plausible but intentionally quarantined until event-specific evidence supports it.  \n\n"
+                "The intended operating sequence is **Catalyst → Asset Exposure → Technical/Flow Confirmation → Decision Support**. "
+                "Catalyst evidence does not overwrite lifecycle stage, ML quality, moving-average structure, or rotation evidence."
+            )
 
 elif page == "Research Evidence":
 
