@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 import pandas as pd
 import streamlit as st
 import plotly.express as px
@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 
 st.set_page_config(
     page_title="Walker Analytics | Sector Flow Dashboard",
-    page_icon="ðŸ“Š",
+    page_icon="📊",
     layout="wide"
 )
 
@@ -187,7 +187,7 @@ if page == "Command Center":
 
     def cc_current_ml_status(row):
         signal_window = str(row.get("Signal_Window", "")).upper()
-        ml_quality = row.get("ML_Quality", "â€” NO CURRENT ML SIGNAL")
+        ml_quality = row.get("ML_Quality", "— NO CURRENT ML SIGNAL")
         rank = row.get("ML_Daily_PctRank")
 
         in_current_early_window = (
@@ -202,9 +202,9 @@ if page == "Command Center":
             return ml_quality, cc_ordinal_percentile(rank), "CURRENT"
 
         if pd.notna(rank):
-            return f"{ml_quality} â€” prior early-window signal", "N/A", "PRIOR"
+            return f"{ml_quality} — prior early-window signal", "N/A", "PRIOR"
 
-        return "â€” NO CURRENT ML SIGNAL", "N/A", "NONE"
+        return "— NO CURRENT ML SIGNAL", "N/A", "NONE"
 
     # --------------------------------------------------------
     # MORNING READ
@@ -212,10 +212,10 @@ if page == "Command Center":
 
     st.subheader("Morning Read")
 
-    new_detection_count = cc_count("â–² NEW DETECTION")
-    early_watch_count = cc_count("â–² EARLY WATCH")
-    investigate_count = cc_count("â˜… INVESTIGATE")
-    high_interest_count = cc_count("â˜…â˜… HIGH INTEREST")
+    new_detection_count = cc_count("▲ NEW DETECTION")
+    early_watch_count = cc_count("▲ EARLY WATCH")
+    investigate_count = cc_count("★ INVESTIGATE")
+    high_interest_count = cc_count("★★ HIGH INTEREST")
 
     morning_lines = []
 
@@ -260,7 +260,7 @@ if page == "Command Center":
     tech_rows = d[d["Ticker"].isin(["XLK", "DRAM", "SOXX", "SMH"])].copy()
 
     fresh_tech = tech_rows[
-        tech_rows["Decision_Support_State"] == "â–² NEW DETECTION"
+        tech_rows["Decision_Support_State"] == "▲ NEW DETECTION"
     ]["Ticker"].tolist() if not tech_rows.empty else []
 
     prior_tech = []
@@ -298,7 +298,7 @@ if page == "Command Center":
         )
 
     for line in morning_lines:
-        st.write("â€¢ " + line)
+        st.write("• " + line)
 
     st.info(
         "Morning Read is deterministic. It translates the tables below into plain language; "
@@ -340,11 +340,11 @@ if page == "Command Center":
     c2.metric("Early Watch", early_watch_count)
     c3.metric("Investigate", investigate_count)
     c4.metric("High Interest", high_interest_count)
-    c5.metric("Established Leader", cc_count("â— ESTABLISHED LEADER"))
-    c6.metric("Structural Caution", cc_count("â–¼ STRUCTURAL CAUTION"))
+    c5.metric("Established Leader", cc_count("● ESTABLISHED LEADER"))
+    c6.metric("Structural Caution", cc_count("▼ STRUCTURAL CAUTION"))
 
     st.caption(
-        "Lifecycle summary from Rotation Decision Support. Day 0 is detection; Days 1â€“4 are the preferred "
+        "Lifecycle summary from Rotation Decision Support. Day 0 is detection; Days 1–4 are the preferred "
         "evaluation window; Day 5 is late-early; older setups transition toward established-trend logic."
     )
 
@@ -357,10 +357,10 @@ if page == "Command Center":
     st.subheader("3. What Deserves Attention Now?")
 
     opportunity_states = [
-        "â˜…â˜… HIGH INTEREST",
-        "â˜… INVESTIGATE",
-        "â–² NEW DETECTION",
-        "â–² EARLY WATCH",
+        "★★ HIGH INTEREST",
+        "★ INVESTIGATE",
+        "▲ NEW DETECTION",
+        "▲ EARLY WATCH",
     ]
 
     opportunities = d[
@@ -382,12 +382,12 @@ if page == "Command Center":
                 prior_quality.append("")
                 prior_rank.append("")
             elif status == "PRIOR":
-                current_quality.append("â€” NO CURRENT ML SIGNAL")
+                current_quality.append("— NO CURRENT ML SIGNAL")
                 current_rank.append("N/A")
                 prior_quality.append(quality)
                 prior_rank.append(cc_ordinal_percentile(row.get("ML_Daily_PctRank")))
             else:
-                current_quality.append("â€” NO CURRENT ML SIGNAL")
+                current_quality.append("— NO CURRENT ML SIGNAL")
                 current_rank.append("N/A")
                 prior_quality.append("")
                 prior_rank.append("")
@@ -465,7 +465,7 @@ if page == "Command Center":
 
     st.caption(
         "Compact peer-context summary for XLK / DRAM / SOXX / SMH. "
-        "This is a lifecycle comparisonâ€”not a new technology score."
+        "This is a lifecycle comparison—not a new technology score."
     )
 
     tech_order = {"XLK": 1, "DRAM": 2, "SOXX": 3, "SMH": 4}
@@ -490,12 +490,12 @@ if page == "Command Center":
                 tech_prior_quality.append("")
                 tech_prior_rank.append("")
             elif status == "PRIOR":
-                tech_current_quality.append("â€” NO CURRENT ML SIGNAL")
+                tech_current_quality.append("— NO CURRENT ML SIGNAL")
                 tech_current_rank.append("N/A")
                 tech_prior_quality.append(quality)
                 tech_prior_rank.append(cc_ordinal_percentile(row.get("ML_Daily_PctRank")))
             else:
-                tech_current_quality.append("â€” NO CURRENT ML SIGNAL")
+                tech_current_quality.append("— NO CURRENT ML SIGNAL")
                 tech_current_rank.append("N/A")
                 tech_prior_quality.append("")
                 tech_prior_rank.append("")
@@ -585,8 +585,8 @@ if page == "Command Center":
         st.markdown("#### Deterioration / Structural Attention")
 
         risk_states = [
-            "â— PULLBACK / REVIEW",
-            "â–¼ STRUCTURAL CAUTION",
+            "● PULLBACK / REVIEW",
+            "▼ STRUCTURAL CAUTION",
         ]
 
         risk_view = d[
@@ -670,12 +670,12 @@ if page == "Command Center":
             "Where to Investigate": "MA / EMA Radar"
         },
         {
-            "Rule": "Days 1â€“4 = preferred evaluation window",
+            "Rule": "Days 1–4 = preferred evaluation window",
             "Why": "Historical Early-Leader rates improved modestly after the cross while the move was still early.",
             "Where to Investigate": "Rotation Decision Support"
         },
         {
-            "Rule": "Day 3 deserves extra attentionâ€”not an automatic buy",
+            "Rule": "Day 3 deserves extra attention—not an automatic buy",
             "Why": "Day 3 had the strongest simple day-age rate in the sample, but only slightly.",
             "Where to Investigate": "User Guide / Research Evidence"
         },
@@ -727,7 +727,7 @@ elif page == "Decision Path":
 
     st.header("Decision Path")
     st.caption(
-        "Integrated morning workflow: freshness â†’ move stage â†’ technical/flow evidence â†’ catalyst risk â†’ "
+        "Integrated morning workflow: freshness → move stage → technical/flow evidence → catalyst risk → "
         "confirmation/conflict. This page summarizes existing Walker evidence; it does not replace the underlying pages."
     )
 
@@ -778,14 +778,14 @@ elif page == "Decision Path":
         positive = dirs.str.contains("POSITIVE|BULLISH|SUPPORTIVE", regex=True).any()
         negative = dirs.str.contains("NEGATIVE|BEARISH|ADVERSE", regex=True).any()
         if tech_positive and negative:
-            return "âš  Quant strong / catalyst adverse"
+            return "⚠ Quant strong / catalyst adverse"
         if tech_positive and positive:
-            return "â–² Quant + catalyst aligned"
+            return "▲ Quant + catalyst aligned"
         if (not tech_positive) and positive:
-            return "â— Catalyst positive / quant not confirmed"
+            return "● Catalyst positive / quant not confirmed"
         if negative:
-            return "â–¼ Catalyst adverse"
-        return "â— Mixed / incomplete"
+            return "▼ Catalyst adverse"
+        return "● Mixed / incomplete"
 
 
     def _dp_actionability(row, catalyst_rows, quant_time):
@@ -805,7 +805,7 @@ elif page == "Decision Path":
                 catalyst_newer = (catalyst_rows["_published"] > quant_time).any()
 
         if catalyst_newer and adverse:
-            return "EVENT RISK â€” REVALIDATE", "Material adverse catalyst evidence is newer than the quantitative snapshot."
+            return "EVENT RISK — REVALIDATE", "Material adverse catalyst evidence is newer than the quantitative snapshot."
         if stage == "DETERIORATING":
             return "WAIT / REVALIDATE", "Near-term move evidence is deteriorating; strong historical scores may be residual."
         if stage == "EXTENDED":
@@ -813,13 +813,13 @@ elif page == "Decision Path":
         if stage == "EARLY":
             if supportive:
                 return "EARLY + CATALYST SUPPORT", "Fresh technical timing and supportive mapped catalyst evidence are aligned."
-            return "EARLY â€” VERIFY CATALYST", "Fresh technical timing is present, but current catalyst support is absent or incomplete."
+            return "EARLY — VERIFY CATALYST", "Fresh technical timing is present, but current catalyst support is absent or incomplete."
         if stage == "DEVELOPING":
             if rotation in {"LEADER", "EMERGING"} and supportive:
                 return "DEVELOPING + ALIGNED", "Quantitative and catalyst evidence are directionally aligned."
             if rotation in {"LEADER", "EMERGING"}:
                 return "QUANT SUPPORTED", "The move is developing with quantitative support; catalyst confirmation is incomplete."
-            return "DEVELOPING â€” INVESTIGATE", "The move is developing but broader confirmation is incomplete."
+            return "DEVELOPING — INVESTIGATE", "The move is developing but broader confirmation is incomplete."
         if stage == "ESTABLISHED":
             return "MANAGE / AVOID LATE ENTRY", "Established strength may remain viable, but maturity is not treated as a fresh entry."
         return "INCOMPLETE", "Evidence is mixed or insufficient for a cleaner display-only setup classification."
@@ -858,7 +858,7 @@ elif page == "Decision Path":
         )
     elif len(newer_news) > 0:
         st.warning(
-            "âš  MATERIAL NEWS IS NEWER THAN THE QUANTITATIVE SNAPSHOT. Treat affected technical/flow readings as "
+            "⚠ MATERIAL NEWS IS NEWER THAN THE QUANTITATIVE SNAPSHOT. Treat affected technical/flow readings as "
             "pre-event evidence until the market has had a chance to confirm or reject the new information."
         )
     else:
@@ -876,7 +876,7 @@ elif page == "Decision Path":
         )
 
     st.divider()
-    st.subheader("2. Move Maturity â€” Strong Is Not the Same as Early")
+    st.subheader("2. Move Maturity — Strong Is Not the Same as Early")
     st.caption(
         "Display-only maturity view built from existing EMA20 timing, extension, acceleration, early-rotation, and "
         "rotation-state evidence. It does not change Walker's established scores or business logic."
@@ -928,7 +928,7 @@ elif page == "Decision Path":
     a5.metric("Quant / Catalyst", _dp_conflict_label(row, asset_catalysts))
     a6.metric("Setup Condition", action_label)
 
-    if action_label in {"EVENT RISK â€” REVALIDATE", "WAIT / REVALIDATE", "DO NOT CHASE"}:
+    if action_label in {"EVENT RISK — REVALIDATE", "WAIT / REVALIDATE", "DO NOT CHASE"}:
         st.warning(f"**Decision-path interpretation:** {action_reason}")
     else:
         st.info(f"**Decision-path interpretation:** {action_reason}")
@@ -961,20 +961,20 @@ elif page == "Decision Path":
             post_quant = asset_catalysts[asset_catalysts["_published"] > quant_time]
             if not post_quant.empty:
                 st.warning(
-                    f"âš  {len(post_quant)} mapped catalyst signal(s) for {selected} were published after the quantitative "
+                    f"⚠ {len(post_quant)} mapped catalyst signal(s) for {selected} were published after the quantitative "
                     "snapshot. Existing technical strength predates this information."
                 )
 
     st.divider()
     st.subheader("4. Operating Sequence")
     st.markdown(
-        "**Freshness** â†’ Is news newer than the quantitative snapshot?  \n"
-        "**Move stage** â†’ Is the asset early, developing, established, extended, or deteriorating?  \n"
-        "**Entry structure** â†’ What do EMA20 / MA structure / slope say now?  \n"
-        "**Capital flow** â†’ Are momentum, acceleration, readiness, peers, and hierarchy supportive?  \n"
-        "**Catalyst** â†’ Why might the move exist, and is there new information that changes the premise?  \n"
-        "**Conflict check** â†’ Do quantitative and catalyst evidence agree or disagree?  \n"
-        "**Decision support** â†’ Investigate, wait for confirmation, manage an existing trend, or avoid chasing an extended/conflicted setup."
+        "**Freshness** → Is news newer than the quantitative snapshot?  \n"
+        "**Move stage** → Is the asset early, developing, established, extended, or deteriorating?  \n"
+        "**Entry structure** → What do EMA20 / MA structure / slope say now?  \n"
+        "**Capital flow** → Are momentum, acceleration, readiness, peers, and hierarchy supportive?  \n"
+        "**Catalyst** → Why might the move exist, and is there new information that changes the premise?  \n"
+        "**Conflict check** → Do quantitative and catalyst evidence agree or disagree?  \n"
+        "**Decision support** → Investigate, wait for confirmation, manage an existing trend, or avoid chasing an extended/conflicted setup."
     )
     st.info(
         "Important: catalyst evidence does not rewrite prior technical data. When material news is newer than the "
@@ -987,7 +987,7 @@ elif page == "Market Map":
 
     st.caption(
         "Market hierarchy, peer-relative intelligence, and vertical confirmation. "
-        "Use this page to ask whether strength is isolated or supported across Asset Class â†’ Sector â†’ Peer Group â†’ Instrument. "
+        "Use this page to ask whether strength is isolated or supported across Asset Class → Sector → Peer Group → Instrument. "
         "This page remains descriptive: it does not change Walker scoring, ML, entry logic, or stop logic."
     )
 
@@ -1152,7 +1152,7 @@ elif page == "Market Map":
 
     st.caption(
         "Market hierarchy, peer-relative intelligence, and vertical confirmation. "
-        "Use this page to ask whether strength is isolated or supported across Asset Class â†’ Sector â†’ Peer Group â†’ Instrument. "
+        "Use this page to ask whether strength is isolated or supported across Asset Class → Sector → Peer Group → Instrument. "
         "This page remains descriptive: it does not change Walker scoring, ML, entry logic, or stop logic."
     )
 
@@ -1383,14 +1383,14 @@ elif page == "Market Map":
         ]
 
     strong_labels = {
-        "â˜…â˜… BROAD MULTI-LEVEL CONFIRMATION",
-        "â˜… STRONG HIERARCHICAL CONFIRMATION",
-        "â–² MULTI-LEVEL SUPPORT",
+        "★★ BROAD MULTI-LEVEL CONFIRMATION",
+        "★ STRONG HIERARCHICAL CONFIRMATION",
+        "▲ MULTI-LEVEL SUPPORT",
     }
 
     caution_labels = {
-        "âš  ISOLATED STRENGTH / BROADER CAUTION",
-        "â–¼ MULTI-LEVEL CAUTION",
+        "⚠ ISOLATED STRENGTH / BROADER CAUTION",
+        "▼ MULTI-LEVEL CAUTION",
     }
 
     v1, v2, v3, v4 = st.columns(4)
@@ -1407,7 +1407,7 @@ elif page == "Market Map":
 
     v3.metric(
         "Mixed Hierarchy",
-        int((vertical_visible["Vertical_Hierarchy_Read"] == "â— MIXED HIERARCHY").sum())
+        int((vertical_visible["Vertical_Hierarchy_Read"] == "● MIXED HIERARCHY").sum())
     )
 
     v4.metric(
@@ -1707,7 +1707,7 @@ elif page == "Market Map":
     # SELECTED INSTRUMENT
     # --------------------------------------------------------
 
-    st.subheader("6. Selected Instrument â€” Vertical Confirmation")
+    st.subheader("6. Selected Instrument — Vertical Confirmation")
 
     selected_vertical = vertical[
         vertical["Ticker"] == selected_ticker
@@ -1832,7 +1832,7 @@ elif page == "Market Map":
     # SELECTED PEER GROUP MEMBER COMPARISON
     # --------------------------------------------------------
 
-    st.subheader("7. Selected Peer Group â€” Member Comparison")
+    st.subheader("7. Selected Peer Group — Member Comparison")
 
     if not selected_hierarchy.empty:
         selected_group_name = selected_hierarchy.iloc[0]["Peer_Group"]
@@ -1881,7 +1881,7 @@ elif page == "Market Map":
         )
 
         st.write(
-            f"**{selected_group_name}** â€” "
+            f"**{selected_group_name}** — "
             f"{len(peer_members)} tracked instrument(s)"
         )
 
@@ -2023,19 +2023,19 @@ elif page == "MA / EMA Radar":
 
         if pd.notna(days) and days <= 5:
             if cross == "CROSS ABOVE":
-                return "â–² FRESH CROSS"
+                return "▲ FRESH CROSS"
             elif cross == "CROSS BELOW":
-                return "â–¼ FRESH CROSS"
+                return "▼ FRESH CROSS"
 
         if pd.notna(pct):
             if abs(pct) <= 0.02:
-                return "â— NEAR EMA20"
+                return "● NEAR EMA20"
             elif pct > 0:
-                return "â–² ABOVE EMA20"
+                return "▲ ABOVE EMA20"
             else:
-                return "â–¼ BELOW EMA20"
+                return "▼ BELOW EMA20"
 
-        return "â€” UNKNOWN"
+        return "— UNKNOWN"
 
     radar["EMA_Signal"] = radar.apply(
         ema_signal,
@@ -2115,7 +2115,7 @@ elif page == "MA / EMA Radar":
     )
 
     c5.metric(
-        "Crossed EMA20 â‰¤ 5 Days",
+        "Crossed EMA20 ≤ 5 Days",
         int(recent_cross)
     )
 
@@ -2128,19 +2128,19 @@ elif page == "MA / EMA Radar":
 
     st.caption(
         "Whole-universe view of price positioning relative to the "
-        "EMA20 and major moving averages. â–² = above, â–¼ = below."
+        "EMA20 and major moving averages. ▲ = above, ▼ = below."
     )
 
     def ma_position_text(price, ma_value):
         if pd.isna(price) or pd.isna(ma_value) or ma_value == 0:
-            return "â€”"
+            return "—"
 
         pct = ((price / ma_value) - 1) * 100
 
         if pct >= 0:
-            return f"â–² {pct:+.1f}%"
+            return f"▲ {pct:+.1f}%"
         else:
-            return f"â–¼ {pct:+.1f}%"
+            return f"▼ {pct:+.1f}%"
 
     beach = radar.copy()
 
@@ -2335,29 +2335,29 @@ elif page == "MA / EMA Radar":
             and long_term_support
             and rotation_positive
         ):
-            return "â–² HIGH INTEREST"
+            return "▲ HIGH INTEREST"
 
         elif (
             fresh_below
             and long_term_support
         ):
-            return "â–¼ PULLBACK WATCH"
+            return "▼ PULLBACK WATCH"
 
         elif (
             near_ema
             and positive_slope
             and long_term_support
         ):
-            return "â— SETUP WATCH"
+            return "● SETUP WATCH"
 
         elif fresh_below:
-            return "â–¼ CAUTION"
+            return "▼ CAUTION"
 
         elif fresh_above:
-            return "â–² EARLY CROSS"
+            return "▲ EARLY CROSS"
 
         else:
-            return "â€” NO SETUP"
+            return "— NO SETUP"
 
     radar["Setup_Status"] = radar.apply(
         classify_setup,
@@ -2367,23 +2367,23 @@ elif page == "MA / EMA Radar":
     setup_counts = radar["Setup_Status"].value_counts()
 
     high_interest_count = setup_counts.get(
-        "â–² HIGH INTEREST", 0
+        "▲ HIGH INTEREST", 0
     )
 
     pullback_count = setup_counts.get(
-        "â–¼ PULLBACK WATCH", 0
+        "▼ PULLBACK WATCH", 0
     )
 
     setup_watch_count = setup_counts.get(
-        "â— SETUP WATCH", 0
+        "● SETUP WATCH", 0
     )
 
     caution_count = setup_counts.get(
-        "â–¼ CAUTION", 0
+        "▼ CAUTION", 0
     )
 
     early_cross_count = setup_counts.get(
-        "â–² EARLY CROSS", 0
+        "▲ EARLY CROSS", 0
     )
 
     s1, s2, s3, s4, s5 = st.columns(5)
@@ -2414,15 +2414,15 @@ elif page == "MA / EMA Radar":
     )
 
     actionable = radar[
-        radar["Setup_Status"] != "â€” NO SETUP"
+        radar["Setup_Status"] != "— NO SETUP"
     ].copy()
 
     setup_priority = {
-        "â–² HIGH INTEREST": 1,
-        "â–¼ PULLBACK WATCH": 2,
-        "â— SETUP WATCH": 3,
-        "â–² EARLY CROSS": 4,
-        "â–¼ CAUTION": 5,
+        "▲ HIGH INTEREST": 1,
+        "▼ PULLBACK WATCH": 2,
+        "● SETUP WATCH": 3,
+        "▲ EARLY CROSS": 4,
+        "▼ CAUTION": 5,
     }
 
     actionable["Setup_Priority"] = (
@@ -2584,7 +2584,7 @@ elif page == "MA / EMA Radar":
             return "N/A"
         return f"{value:.{decimals}f}"
 
-    setup_status = focus_row.get("Setup_Status", "â€” NO SETUP")
+    setup_status = focus_row.get("Setup_Status", "— NO SETUP")
     price = focus_row.get("Price")
     ema20 = focus_row.get("EMA20")
     ma30 = focus_row.get("MA30")
@@ -2654,65 +2654,65 @@ elif page == "MA / EMA Radar":
         if pd.notna(days_since_cross):
             if days_since_cross <= 5:
                 reasons.append(
-                    f"â–² FRESH EMA20 cross ABOVE â€” "
+                    f"▲ FRESH EMA20 cross ABOVE — "
                     f"{int(days_since_cross)} trading day(s) ago."
                 )
             else:
                 reasons.append(
-                    f"â— Last EMA20 cross was ABOVE â€” "
+                    f"● Last EMA20 cross was ABOVE — "
                     f"{int(days_since_cross)} trading day(s) ago."
                 )
         else:
-            reasons.append("â–² Last identified EMA20 cross was ABOVE.")
+            reasons.append("▲ Last identified EMA20 cross was ABOVE.")
 
     elif last_cross == "CROSS BELOW":
         if pd.notna(days_since_cross):
             if days_since_cross <= 5:
                 reasons.append(
-                    f"â–¼ FRESH EMA20 cross BELOW â€” "
+                    f"▼ FRESH EMA20 cross BELOW — "
                     f"{int(days_since_cross)} trading day(s) ago."
                 )
             else:
                 reasons.append(
-                    f"â— Last EMA20 cross was BELOW â€” "
+                    f"● Last EMA20 cross was BELOW — "
                     f"{int(days_since_cross)} trading day(s) ago."
                 )
         else:
-            reasons.append("â–¼ Last identified EMA20 cross was BELOW.")
+            reasons.append("▼ Last identified EMA20 cross was BELOW.")
 
     reasons.append(
-        f"{'â–²' if above_ema20 else 'â–¼'} "
+        f"{'▲' if above_ema20 else '▼'} "
         f"Price is {'above' if above_ema20 else 'below'} EMA20."
     )
     reasons.append(
-        f"{'â–²' if positive_ema_slope else 'â–¼'} "
+        f"{'▲' if positive_ema_slope else '▼'} "
         f"EMA20 5-day slope is "
         f"{'positive' if positive_ema_slope else 'flat or negative'} "
         f"({radar_fmt_pct(ema20_slope)})."
     )
     reasons.append(
-        f"{'â–²' if above_ma30 else 'â–¼'} "
+        f"{'▲' if above_ma30 else '▼'} "
         f"Price is {'above' if above_ma30 else 'below'} MA30."
     )
     reasons.append(
-        f"{'â–²' if above_ma50 else 'â–¼'} "
+        f"{'▲' if above_ma50 else '▼'} "
         f"Price is {'above' if above_ma50 else 'below'} MA50."
     )
 
     if pd.notna(ma100):
         reasons.append(
-            f"{'â–²' if above_ma100 else 'â–¼'} "
+            f"{'▲' if above_ma100 else '▼'} "
             f"Price is {'above' if above_ma100 else 'below'} MA100."
         )
 
     if pd.notna(ma200):
         reasons.append(
-            f"{'â–²' if above_ma200 else 'â–¼'} "
+            f"{'▲' if above_ma200 else '▼'} "
             f"Price is {'above' if above_ma200 else 'below'} MA200."
         )
 
     reasons.append(
-        f"{'â–²' if rotation_positive else 'â—'} "
+        f"{'▲' if rotation_positive else '●'} "
         f"Rotation evidence is "
         f"{'supportive' if rotation_positive else 'not yet fully supportive'} "
         f"(Early: {early_state}; Confirmed: {rotation_state})."
@@ -2723,31 +2723,31 @@ elif page == "MA / EMA Radar":
 
     st.markdown("#### Decision-Support Interpretation")
 
-    if setup_status == "â–² HIGH INTEREST":
+    if setup_status == "▲ HIGH INTEREST":
         interpretation = (
             "Technical structure and rotation evidence are aligned. "
             "This asset deserves near-term investigation for a possible "
             "entry, add, or continuation setup."
         )
-    elif setup_status == "â–¼ PULLBACK WATCH":
+    elif setup_status == "▼ PULLBACK WATCH":
         interpretation = (
             "Price has weakened through EMA20, but broader trend structure "
             "remains sufficiently intact to investigate whether this is a "
             "constructive pullback rather than a trend failure."
         )
-    elif setup_status == "â— SETUP WATCH":
+    elif setup_status == "● SETUP WATCH":
         interpretation = (
             "The asset is near EMA20 with improving trend characteristics, "
             "but the setup is not yet fully confirmed. Watch for additional "
             "price or rotation confirmation."
         )
-    elif setup_status == "â–² EARLY CROSS":
+    elif setup_status == "▲ EARLY CROSS":
         interpretation = (
             "A fresh bullish EMA20 event has occurred, but broader trend "
             "structure and/or rotation confirmation is incomplete. "
             "Treat this as an early signal rather than a confirmed entry."
         )
-    elif setup_status == "â–¼ CAUTION":
+    elif setup_status == "▼ CAUTION":
         interpretation = (
             "Recent EMA20 behavior indicates deterioration. Review broader "
             "MA support, rotation state, and position risk before taking action."
@@ -2969,7 +2969,7 @@ elif page == "MA / EMA Radar":
 
 elif page == "Wide Beach":
 
-    st.header("Wide Beach â€” Historical MA Workbench")
+    st.header("Wide Beach — Historical MA Workbench")
 
     st.caption(
         "Historical moving-average workbench built directly from moving_average_wide.csv. "
@@ -3004,8 +3004,8 @@ elif page == "Wide Beach":
 
     st.subheader("Current Lifecycle Beach")
     st.caption(
-        "Current-state view of the full universe: Early Detection â†’ Confirming / Building â†’ "
-        "Leading â†’ Mature / Extended â†’ Weakening / Pullback â†’ Below Structure. "
+        "Current-state view of the full universe: Early Detection → Confirming / Building → "
+        "Leading → Mature / Extended → Weakening / Pullback → Below Structure. "
         "The stage labels and symbols carry the meaning; color is supplemental only."
     )
 
@@ -3018,41 +3018,41 @@ elif page == "Wide Beach":
     m3.metric("System Refresh", system_refresh)
 
     lifecycle_order = [
-        "1 â€” EARLY DETECTION",
-        "2 â€” CONFIRMING / BUILDING",
-        "3 â€” LEADING",
-        "4 â€” MATURE / EXTENDED",
-        "5 â€” WEAKENING / PULLBACK",
-        "6 â€” BELOW STRUCTURE",
+        "1 — EARLY DETECTION",
+        "2 — CONFIRMING / BUILDING",
+        "3 — LEADING",
+        "4 — MATURE / EXTENDED",
+        "5 — WEAKENING / PULLBACK",
+        "6 — BELOW STRUCTURE",
     ]
 
     lifecycle_short = {
-        "1 â€” EARLY DETECTION": "1. EARLY DETECTION",
-        "2 â€” CONFIRMING / BUILDING": "2. CONFIRMING / BUILDING",
-        "3 â€” LEADING": "3. LEADING",
-        "4 â€” MATURE / EXTENDED": "4. MATURE / EXTENDED",
-        "5 â€” WEAKENING / PULLBACK": "5. WEAKENING / PULLBACK",
-        "6 â€” BELOW STRUCTURE": "6. BELOW STRUCTURE",
+        "1 — EARLY DETECTION": "1. EARLY DETECTION",
+        "2 — CONFIRMING / BUILDING": "2. CONFIRMING / BUILDING",
+        "3 — LEADING": "3. LEADING",
+        "4 — MATURE / EXTENDED": "4. MATURE / EXTENDED",
+        "5 — WEAKENING / PULLBACK": "5. WEAKENING / PULLBACK",
+        "6 — BELOW STRUCTURE": "6. BELOW STRUCTURE",
     }
 
     counts = wb["Lifecycle_Zone"].value_counts().reindex(lifecycle_order, fill_value=0)
 
     # --------------------------------------------------------
-    # STEP 34B.1 â€” GRAPHICAL WIDE BEACH
+    # STEP 34B.1 — GRAPHICAL WIDE BEACH
     # Position, labels, counts, symbols, and borders carry the
     # meaning. Color is supplemental only.
     # --------------------------------------------------------
 
     total_assets = int(wb["Ticker"].nunique())
     constructive_count = int(
-        counts.loc["1 â€” EARLY DETECTION"]
-        + counts.loc["2 â€” CONFIRMING / BUILDING"]
-        + counts.loc["3 â€” LEADING"]
+        counts.loc["1 — EARLY DETECTION"]
+        + counts.loc["2 — CONFIRMING / BUILDING"]
+        + counts.loc["3 — LEADING"]
     )
-    mature_count = int(counts.loc["4 â€” MATURE / EXTENDED"])
+    mature_count = int(counts.loc["4 — MATURE / EXTENDED"])
     weak_count = int(
-        counts.loc["5 â€” WEAKENING / PULLBACK"]
-        + counts.loc["6 â€” BELOW STRUCTURE"]
+        counts.loc["5 — WEAKENING / PULLBACK"]
+        + counts.loc["6 — BELOW STRUCTURE"]
     )
 
     constructive_pct = (constructive_count / total_assets * 100) if total_assets else 0.0
@@ -3060,19 +3060,19 @@ elif page == "Wide Beach":
 
     b1, b2, b3 = st.columns(3)
     b1.metric(
-        "Constructive Side Â· Stages 1â€“3",
+        "Constructive Side · Stages 1–3",
         f"{constructive_count} / {total_assets}",
         f"{constructive_pct:.0f}% of universe",
         delta_color="off"
     )
     b2.metric(
-        "Mature / Extended Â· Stage 4",
+        "Mature / Extended · Stage 4",
         f"{mature_count} / {total_assets}",
         "Transition zone",
         delta_color="off"
     )
     b3.metric(
-        "Weak Side Â· Stages 5â€“6",
+        "Weak Side · Stages 5–6",
         f"{weak_count} / {total_assets}",
         f"{weak_pct:.0f}% of universe",
         delta_color="off"
@@ -3095,12 +3095,12 @@ elif page == "Wide Beach":
         )
 
     stage_meta = {
-        "1 â€” EARLY DETECTION": ("â‘ ", "Fresh signal", "New lifecycle event"),
-        "2 â€” CONFIRMING / BUILDING": ("â‘¡", "Building evidence", "Early confirmation"),
-        "3 â€” LEADING": ("â‘¢", "Leadership", "Confirmed strength"),
-        "4 â€” MATURE / EXTENDED": ("â‘£", "Mature trend", "Watch extension"),
-        "5 â€” WEAKENING / PULLBACK": ("â‘¤", "Losing momentum", "Review structure"),
-        "6 â€” BELOW STRUCTURE": ("â‘¥", "Structural weakness", "Below key structure"),
+        "1 — EARLY DETECTION": ("①", "Fresh signal", "New lifecycle event"),
+        "2 — CONFIRMING / BUILDING": ("②", "Building evidence", "Early confirmation"),
+        "3 — LEADING": ("③", "Leadership", "Confirmed strength"),
+        "4 — MATURE / EXTENDED": ("④", "Mature trend", "Watch extension"),
+        "5 — WEAKENING / PULLBACK": ("⑤", "Losing momentum", "Review structure"),
+        "6 — BELOW STRUCTURE": ("⑥", "Structural weakness", "Below key structure"),
     }
 
     def _html_escape(value):
@@ -3124,7 +3124,7 @@ elif page == "Wide Beach":
         ticker_html = "".join(
             f'<span class="wb-ticker">{_html_escape(ticker)}</span>'
             for ticker in tickers_here
-        ) or '<span class="wb-empty">â€”</span>'
+        ) or '<span class="wb-empty">—</span>'
 
         # Keep generated HTML flush-left/minified. Markdown treats lines
         # beginning with four spaces as literal code, even when HTML is allowed.
@@ -3141,7 +3141,7 @@ elif page == "Wide Beach":
 
     st.markdown("#### Lifecycle Flow")
     st.caption(
-        "Read left â†’ right. Each asset occupies one current lifecycle stage. "
+        "Read left → right. Each asset occupies one current lifecycle stage. "
         "Ticker position and stage labels carry the meaning even without color."
     )
 
@@ -3299,7 +3299,7 @@ elif page == "Wide Beach":
 
     st.divider()
 
-    st.subheader("Technology Complex â€” Current Lifecycle")
+    st.subheader("Technology Complex — Current Lifecycle")
     st.caption(
         "Peer-context panel for XLK / DRAM / SOXX / SMH. It shows how the technology complex "
         "is behaving today without creating a new technology score."
@@ -3759,7 +3759,7 @@ elif page == "Wide Beach":
             )
 
     fig_wide.update_layout(
-        title=f"{deep_ticker} â€” Historical Price / MA Structure",
+        title=f"{deep_ticker} — Historical Price / MA Structure",
         xaxis_title="Date",
         yaxis_title="Price",
         hovermode="x unified",
@@ -3805,7 +3805,7 @@ elif page == "Wide Beach":
         )
 
         distance_fig.update_layout(
-            title=f"{deep_ticker} â€” Percent Distance From Moving Averages",
+            title=f"{deep_ticker} — Percent Distance From Moving Averages",
             xaxis_title="Date",
             yaxis_title="Percent Distance",
             hovermode="x unified",
@@ -3908,12 +3908,12 @@ elif page == "Rotation Decision Support":
     )
 
     p1, p2, p3, p4, p5, p6 = st.columns(6)
-    p1.metric("New Detection", decision_count("â–² NEW DETECTION"))
-    p2.metric("Early Watch", decision_count("â–² EARLY WATCH"))
-    p3.metric("Investigate", decision_count("â˜… INVESTIGATE"))
-    p4.metric("High Interest", decision_count("â˜…â˜… HIGH INTEREST"))
-    p5.metric("Established Leader", decision_count("â— ESTABLISHED LEADER"))
-    p6.metric("Structural Caution", decision_count("â–¼ STRUCTURAL CAUTION"))
+    p1.metric("New Detection", decision_count("▲ NEW DETECTION"))
+    p2.metric("Early Watch", decision_count("▲ EARLY WATCH"))
+    p3.metric("Investigate", decision_count("★ INVESTIGATE"))
+    p4.metric("High Interest", decision_count("★★ HIGH INTEREST"))
+    p5.metric("Established Leader", decision_count("● ESTABLISHED LEADER"))
+    p6.metric("Structural Caution", decision_count("▼ STRUCTURAL CAUTION"))
 
     st.divider()
 
@@ -3923,15 +3923,15 @@ elif page == "Rotation Decision Support":
 
     st.subheader("Top Current Opportunities")
     st.caption(
-        "Opportunity-side view: detection â†’ ML quality â†’ confirmation â†’ structure. "
+        "Opportunity-side view: detection → ML quality → confirmation → structure. "
         "ML rank is shown only when the asset is in the model's current early-entry population."
     )
 
     opportunity_states = [
-        "â˜…â˜… HIGH INTEREST",
-        "â˜… INVESTIGATE",
-        "â–² NEW DETECTION",
-        "â–² EARLY WATCH",
+        "★★ HIGH INTEREST",
+        "★ INVESTIGATE",
+        "▲ NEW DETECTION",
+        "▲ EARLY WATCH",
     ]
 
     opportunities = d[
@@ -4093,7 +4093,7 @@ elif page == "Rotation Decision Support":
 
         for _, tech_row in tech.iterrows():
             lifecycle_lines.append(
-                f"**{tech_row.get('Ticker', 'N/A')}** â€” "
+                f"**{tech_row.get('Ticker', 'N/A')}** — "
                 f"{tech_row.get('Decision_Support_State', 'N/A')} | "
                 f"{tech_row.get('Detection_State', 'N/A')} | "
                 f"{tech_row.get('Rotation_State', 'N/A')}"
@@ -4164,7 +4164,7 @@ elif page == "Rotation Decision Support":
     if pd.notna(row.get("MA200")):
         s4.metric("vs MA200", display_pct_fraction(row.get("Distance_To_MA200")))
     else:
-        s4.metric("vs MA200", "N/A â€” insufficient history")
+        s4.metric("vs MA200", "N/A — insufficient history")
 
     st.markdown("#### Why It Is Here")
 
@@ -4218,7 +4218,7 @@ elif page == "Rotation Decision Support":
         else:
             st.write(
                 "**Long-term structural reference:** "
-                "N/A â€” MA200 not yet available because the asset lacks sufficient price history"
+                "N/A — MA200 not yet available because the asset lacks sufficient price history"
             )
 
         st.write(
@@ -4477,7 +4477,7 @@ elif page == "Asset Explorer":
             )
 
     fig_ma.update_layout(
-        title=f"{selected_ticker} â€” Price and Moving Averages",
+        title=f"{selected_ticker} — Price and Moving Averages",
         xaxis_title="Date",
         yaxis_title="Price",
         hovermode="x unified",
@@ -4780,8 +4780,8 @@ elif page == "User Guide":
 
     workflow = pd.DataFrame([
         {"Step": 1, "Page": "Command Center", "Question Answered": "What matters today?", "How to Use It": "Start here. Read the Morning Read, market-wide counts, current opportunity pipeline, technology complex, leadership, and risk watch before drilling down."},
-        {"Step": 2, "Page": "Market Map", "Question Answered": "Where does this asset belong, and is its move supported?", "How to Use It": "Compare the asset with appropriate peers first, then move vertically through Asset Class â†’ Sector â†’ Peer Group â†’ Instrument."},
-        {"Step": 3, "Page": "Rotation Decision Support", "Question Answered": "Does this early opportunity deserve investigation?", "How to Use It": "Review Day 0â€“4 timing, current ML quality, confirmation, MA structure, early rotation state, and decision-support state."},
+        {"Step": 2, "Page": "Market Map", "Question Answered": "Where does this asset belong, and is its move supported?", "How to Use It": "Compare the asset with appropriate peers first, then move vertically through Asset Class → Sector → Peer Group → Instrument."},
+        {"Step": 3, "Page": "Rotation Decision Support", "Question Answered": "Does this early opportunity deserve investigation?", "How to Use It": "Review Day 0–4 timing, current ML quality, confirmation, MA structure, early rotation state, and decision-support state."},
         {"Step": 4, "Page": "MA / EMA Radar", "Question Answered": "What is happening technically right now?", "How to Use It": "Verify EMA20 event timing, slope, distance from moving averages, broader MA structure, and recent cross history."},
         {"Step": 5, "Page": "Wide Beach", "Question Answered": "How did price and the moving averages get here?", "How to Use It": "Inspect exact historical price/MA relationships, compare peers on the same sessions, and identify which MA is relevant for structure or risk."},
         {"Step": 6, "Page": "Early Rotation", "Question Answered": "Where might capital be starting to move?", "How to Use It": "Use faster EMA20/MA30 evidence and acceleration to identify possible new flows before leadership is fully established."},
@@ -4796,28 +4796,28 @@ elif page == "User Guide":
     st.subheader("2. How the Pages Feed Each Other")
     st.markdown("""
 **Command Center**  
-â†“  
-**Market Map â€” Where does it belong and is strength broad or isolated?**  
-â†“  
-**EMA20 Detection â€” Did something new happen?**  
-â†“  
-**ML Quality â€” Was this historically a higher-quality type of early opportunity?**  
-â†“  
-**Days 1â€“4 Confirmation â€” Is evidence developing?**  
-â†“  
-**Peer + Vertical Hierarchy â€” Do peers, sector, and broader levels support the move?**  
-â†“  
-**MA Structure â€” Is technical structure supportive?**  
-â†“  
-**Rotation Analysis â€” Is leadership becoming established?**  
-â†“  
-**Position / Risk Management â€” How much room should the trend receive?**
+↓  
+**Market Map — Where does it belong and is strength broad or isolated?**  
+↓  
+**EMA20 Detection — Did something new happen?**  
+↓  
+**ML Quality — Was this historically a higher-quality type of early opportunity?**  
+↓  
+**Days 1–4 Confirmation — Is evidence developing?**  
+↓  
+**Peer + Vertical Hierarchy — Do peers, sector, and broader levels support the move?**  
+↓  
+**MA Structure — Is technical structure supportive?**  
+↓  
+**Rotation Analysis — Is leadership becoming established?**  
+↓  
+**Position / Risk Management — How much room should the trend receive?**
 """)
 
     st.success("Key concept: the day number tells you WHEN to look. ML and hierarchy help tell you WHAT KIND of opportunity you are looking at.")
 
     st.divider()
-    st.subheader("3. EMA20 Cross â€” Which Day Matters?")
+    st.subheader("3. EMA20 Cross — Which Day Matters?")
     st.caption("Day numbers are trading sessions since the bullish EMA20 cross. The cross session itself is Day 0. The research supports a detection-and-confirmation window, not a magic buy day.")
 
     day_guide = pd.DataFrame([
@@ -4825,7 +4825,7 @@ elif page == "User Guide":
         {"Day": "Day 1", "Role": "VERIFY", "Interpretation": "The move survived one trading session.", "Focus": "Check EMA slope, current ML quality, hierarchy, MA structure, and rotation evidence."},
         {"Day": "Day 2", "Role": "INVESTIGATE", "Interpretation": "More evidence exists while the move is still close to the initiating event.", "Focus": "Strong candidates deserve deeper investigation."},
         {"Day": "Day 3", "Role": "PAY PARTICULAR ATTENTION", "Interpretation": "Day 3 had the strongest simple Early-Leader rate in the historical day-age sample.", "Focus": "Give it extra attention, but do not create a Day-3 automatic-buy rule."},
-        {"Day": "Day 4", "Role": "LATE CONFIRMATION", "Interpretation": "Still inside the preferred Days 1â€“4 research window with more confirmation than Day 0.", "Focus": "Useful if quality remains strong and the asset has not become excessively extended."},
+        {"Day": "Day 4", "Role": "LATE CONFIRMATION", "Interpretation": "Still inside the preferred Days 1–4 research window with more confirmation than Day 0.", "Focus": "Useful if quality remains strong and the asset has not become excessively extended."},
         {"Day": "Day 5", "Role": "LATE EARLY", "Interpretation": "Still fresh enough to monitor, but outside the preferred research entry window used in portfolio tests.", "Focus": "Treat as late-stage early evidence rather than a preferred new entry."},
         {"Day": "Day 6+", "Role": "MANAGE AS A TREND", "Interpretation": "The original EMA20 event is no longer fresh.", "Focus": "Shift emphasis toward leadership, hierarchy, pullbacks, MA structure, and position management."},
     ])
@@ -4837,25 +4837,25 @@ elif page == "User Guide":
     st.markdown("""
 The Market Map adds two different kinds of context:
 
-**Horizontal analysis â€” compare within the right role.**  
+**Horizontal analysis — compare within the right role.**  
 DRAM should be compared with semiconductor peers such as SOXX and SMH. XLK is a broader Technology sector ETF and should not be treated as the same kind of instrument. Future individual securities such as MU should primarily compete with individual-security peers.
 
-**Vertical analysis â€” move through the hierarchy.**  
-`Asset Class â†’ Sector â†’ Peer Group â†’ Instrument`
+**Vertical analysis — move through the hierarchy.**  
+`Asset Class → Sector → Peer Group → Instrument`
 
-The question is not just, â€œIs the ticker strong?â€ It is also, â€œAre the surrounding levels supporting the move?â€
+The question is not just, “Is the ticker strong?” It is also, “Are the surrounding levels supporting the move?”
 """)
 
     hierarchy_reads = pd.DataFrame([
-        {"Read": "â˜…â˜… BROAD MULTI-LEVEL CONFIRMATION", "Meaning": "The asset itself, its peers, its sector, and broader context are substantially aligned.", "How to Use It": "Strong contextual support. Still verify timing, extension, and risk."},
-        {"Read": "â˜… STRONG HIERARCHICAL CONFIRMATION", "Meaning": "The asset is strong relative to peers and several broader levels are supportive.", "How to Use It": "Treat as stronger evidence than an isolated ticker move."},
-        {"Read": "â–² MULTI-LEVEL SUPPORT", "Meaning": "Multiple levels are supportive, but not all evidence is at the strongest level.", "How to Use It": "Positive context; investigate the asset-level setup."},
-        {"Read": "â–² ASSET LEADS MIXED PEERS", "Meaning": "The asset may be moving before its peer group broadly confirms.", "How to Use It": "Interesting early behavior, but broader confirmation is incomplete."},
-        {"Read": "âš  ISOLATED STRENGTH / BROADER CAUTION", "Meaning": "The ticker is stronger than the surrounding hierarchy.", "How to Use It": "Investigate why. Do not assume isolated strength represents durable capital flow."},
-        {"Read": "â— BROADER SUPPORT / ASSET NOT ACTIVE", "Meaning": "The surrounding group/sector is favorable, but the individual asset has not activated.", "How to Use It": "Watch for a future asset-level trigger."},
-        {"Read": "â–² ASSET + SECTOR SUPPORT / NO PEER SET", "Meaning": "The asset and sector are supportive, but the peer group is too small for a meaningful peer comparison.", "How to Use It": "Use available context without manufacturing a peer result."},
-        {"Read": "â–¼ MULTI-LEVEL CAUTION", "Meaning": "Weakness or structural caution exists at multiple levels.", "How to Use It": "Treat the broader environment as a headwind."},
-        {"Read": "â— MIXED HIERARCHY", "Meaning": "The levels do not agree strongly enough for a clear hierarchical conclusion.", "How to Use It": "Rely more heavily on asset-specific evidence and continue monitoring."},
+        {"Read": "★★ BROAD MULTI-LEVEL CONFIRMATION", "Meaning": "The asset itself, its peers, its sector, and broader context are substantially aligned.", "How to Use It": "Strong contextual support. Still verify timing, extension, and risk."},
+        {"Read": "★ STRONG HIERARCHICAL CONFIRMATION", "Meaning": "The asset is strong relative to peers and several broader levels are supportive.", "How to Use It": "Treat as stronger evidence than an isolated ticker move."},
+        {"Read": "▲ MULTI-LEVEL SUPPORT", "Meaning": "Multiple levels are supportive, but not all evidence is at the strongest level.", "How to Use It": "Positive context; investigate the asset-level setup."},
+        {"Read": "▲ ASSET LEADS MIXED PEERS", "Meaning": "The asset may be moving before its peer group broadly confirms.", "How to Use It": "Interesting early behavior, but broader confirmation is incomplete."},
+        {"Read": "⚠ ISOLATED STRENGTH / BROADER CAUTION", "Meaning": "The ticker is stronger than the surrounding hierarchy.", "How to Use It": "Investigate why. Do not assume isolated strength represents durable capital flow."},
+        {"Read": "● BROADER SUPPORT / ASSET NOT ACTIVE", "Meaning": "The surrounding group/sector is favorable, but the individual asset has not activated.", "How to Use It": "Watch for a future asset-level trigger."},
+        {"Read": "▲ ASSET + SECTOR SUPPORT / NO PEER SET", "Meaning": "The asset and sector are supportive, but the peer group is too small for a meaningful peer comparison.", "How to Use It": "Use available context without manufacturing a peer result."},
+        {"Read": "▼ MULTI-LEVEL CAUTION", "Meaning": "Weakness or structural caution exists at multiple levels.", "How to Use It": "Treat the broader environment as a headwind."},
+        {"Read": "● MIXED HIERARCHY", "Meaning": "The levels do not agree strongly enough for a clear hierarchical conclusion.", "How to Use It": "Rely more heavily on asset-specific evidence and continue monitoring."},
     ])
     st.dataframe(hierarchy_reads, width="stretch", hide_index=True, height=430)
     st.warning("NO PEER COMPARISON YET is not a bearish signal. It means the current tracked universe does not contain enough comparable instruments in that peer group.")
@@ -4875,9 +4875,9 @@ Example: a 92nd-percentile current ML rank means the setup ranked higher than mo
     st.divider()
     st.subheader("6. Early Rotation vs Rotation Analysis")
     st.markdown("""
-**Early Rotation:** â€œWhere might capital be starting to move?â€ It emphasizes faster EMA20/MA30 evidence, acceleration, and early-state transitions.
+**Early Rotation:** “Where might capital be starting to move?” It emphasizes faster EMA20/MA30 evidence, acceleration, and early-state transitions.
 
-**Rotation Analysis:** â€œWhere is leadership already established?â€ It emphasizes momentum, acceleration, trend health, readiness, and confirmed leadership states.
+**Rotation Analysis:** “Where is leadership already established?” It emphasizes momentum, acceleration, trend health, readiness, and confirmed leadership states.
 
 A strong system needs both. Early detection without confirmation creates false starts; leadership without early detection can identify the move only after much of it has already happened.
 """)
@@ -4895,9 +4895,9 @@ A strong system needs both. Early detection without confirmation creates false s
     st.markdown("""
 **Current earned-protection research framework**
 
-- After approximately **+5% peak gain** â†’ MA100 can become the earned protection tier.
-- After approximately **+10% peak gain** â†’ MA50 can become the earned protection tier.
-- After approximately **+20% peak gain** â†’ MA30 can become the earned protection tier.
+- After approximately **+5% peak gain** → MA100 can become the earned protection tier.
+- After approximately **+10% peak gain** → MA50 can become the earned protection tier.
+- After approximately **+20% peak gain** → MA30 can become the earned protection tier.
 
 The **MA tier ratchets tighter**, but the actual dollar reference remains the **current day's value of that moving average**. The moving-average dollar price itself is not frozen.
 """)
@@ -4907,12 +4907,12 @@ The **MA tier ratchets tighter**, but the actual dollar reference remains the **
     st.subheader("8. What Walker Analytics Does NOT Mean")
     does_not_mean = pd.DataFrame([
         {"Display / Observation": "92nd-percentile ML rank", "Does NOT Mean": "92% probability the trade makes money."},
-        {"Display / Observation": "â–² NEW DETECTION", "Does NOT Mean": "BUY now."},
-        {"Display / Observation": "â˜…â˜… HIGH INTEREST", "Does NOT Mean": "Automatic portfolio entry."},
-        {"Display / Observation": "â— ESTABLISHED LEADER", "Does NOT Mean": "Buy regardless of extension or risk."},
-        {"Display / Observation": "â–¼ STRUCTURAL CAUTION", "Does NOT Mean": "Automatic SELL."},
-        {"Display / Observation": "â–² STRONG WITHIN PEERS", "Does NOT Mean": "The broader sector or market is also strong."},
-        {"Display / Observation": "â˜…â˜… BROAD MULTI-LEVEL CONFIRMATION", "Does NOT Mean": "Guaranteed continuation."},
+        {"Display / Observation": "▲ NEW DETECTION", "Does NOT Mean": "BUY now."},
+        {"Display / Observation": "★★ HIGH INTEREST", "Does NOT Mean": "Automatic portfolio entry."},
+        {"Display / Observation": "● ESTABLISHED LEADER", "Does NOT Mean": "Buy regardless of extension or risk."},
+        {"Display / Observation": "▼ STRUCTURAL CAUTION", "Does NOT Mean": "Automatic SELL."},
+        {"Display / Observation": "▲ STRONG WITHIN PEERS", "Does NOT Mean": "The broader sector or market is also strong."},
+        {"Display / Observation": "★★ BROAD MULTI-LEVEL CONFIRMATION", "Does NOT Mean": "Guaranteed continuation."},
         {"Display / Observation": "A new candidate ranks higher than a current holding", "Does NOT Mean": "Sell the holding and rotate automatically."},
         {"Display / Observation": "NO PEER COMPARISON YET", "Does NOT Mean": "Weak asset."},
     ])
@@ -4955,7 +4955,7 @@ Only features that improve out-of-sample evidence should be allowed into the pro
 
 
     st.markdown("---")
-    st.subheader("Wide Beach â€” Lifecycle Stages")
+    st.subheader("Wide Beach — Lifecycle Stages")
     st.write(
         "The Wide Beach organizes each asset into one current technical lifecycle stage. "
         "It is designed to answer **where the asset is in its lifecycle now**, not to issue a BUY or SELL instruction."
@@ -4964,32 +4964,32 @@ Only features that improve out-of-sample evidence should be allowed into the pro
     lifecycle_guide = pd.DataFrame(
         [
             {
-                "Stage": "â‘  Early Detection",
+                "Stage": "① Early Detection",
                 "Meaning": "A fresh lifecycle event has occurred, typically associated with a new EMA20 signal.",
                 "How to Interpret It": "Something changed. This is the earliest investigation stage, not confirmation that a new trend will succeed.",
             },
             {
-                "Stage": "â‘¡ Confirming / Building",
+                "Stage": "② Confirming / Building",
                 "Meaning": "The initial signal is beginning to accumulate supporting evidence.",
                 "How to Interpret It": "The setup is developing. Confirmation, rotation evidence, structure, and ML quality can help distinguish stronger candidates from failed signals.",
             },
             {
-                "Stage": "â‘¢ Leading",
+                "Stage": "③ Leading",
                 "Meaning": "The asset has established stronger trend / rotation characteristics and supporting structure.",
                 "How to Interpret It": "Leadership is established. The asset has moved beyond early detection into a more mature positive trend state.",
             },
             {
-                "Stage": "â‘£ Mature / Extended",
+                "Stage": "④ Mature / Extended",
                 "Meaning": "Leadership remains intact, but the move has progressed substantially.",
                 "How to Interpret It": "The trend remains strong, but it is no longer early. This stage emphasizes extension and position-management awareness rather than fresh discovery.",
             },
             {
-                "Stage": "â‘¤ Weakening / Pullback",
+                "Stage": "⑤ Weakening / Pullback",
                 "Meaning": "Momentum has deteriorated, an EMA20 break or pullback has occurred, or other evidence indicates weakening.",
                 "How to Interpret It": "The trend needs review. This does not automatically mean the longer-term structure has failed; strong prior ML or rotation evidence can remain while the current lifecycle weakens.",
             },
             {
-                "Stage": "â‘¥ Below Structure",
+                "Stage": "⑥ Below Structure",
                 "Meaning": "Important structural support has deteriorated or price has moved below the relevant longer-term structure.",
                 "How to Interpret It": "Structural weakness is present. This is materially different from an ordinary pullback and represents the weakest Wide Beach lifecycle state.",
             },
@@ -5017,13 +5017,13 @@ Only features that improve out-of-sample evidence should be allowed into the pro
     st.markdown("#### Lifecycle Groups")
     g1, g2, g3 = st.columns(3)
     with g1:
-        st.markdown("**Stages 1â€“3 â€” Constructive Side**")
+        st.markdown("**Stages 1–3 — Constructive Side**")
         st.caption("Detection through established leadership.")
     with g2:
-        st.markdown("**Stage 4 â€” Mature / Transition Zone**")
+        st.markdown("**Stage 4 — Mature / Transition Zone**")
         st.caption("Strong trend, but increasingly mature or extended.")
     with g3:
-        st.markdown("**Stages 5â€“6 â€” Weak Side**")
+        st.markdown("**Stages 5–6 — Weak Side**")
         st.caption("Pullback / weakening through structural deterioration.")
 
     st.markdown("#### Lifecycle Stage vs. ML Quality")
@@ -5032,7 +5032,7 @@ Only features that improve out-of-sample evidence should be allowed into the pro
         "asset's technical condition since detection. **ML quality** describes the historical quality "
         "of the detected opportunity based on the model evidence available for that signal. "
         "An asset can therefore retain strong prior ML evidence while currently occupying "
-        "â‘¤ Weakening / Pullback. One layer should not overwrite the other."
+        "⑤ Weakening / Pullback. One layer should not overwrite the other."
     )
 
 elif page == "Catalyst Intelligence":
@@ -5040,7 +5040,7 @@ elif page == "Catalyst Intelligence":
     st.header("Catalyst Intelligence")
     st.caption(
         "Forward-looking financial catalyst evidence layered beside Walker Analytics technical, flow, hierarchy, and ML evidence. "
-        "Catalyst relationships are decision supportâ€”not trade instructions."
+        "Catalyst relationships are decision support—not trade instructions."
     )
 
     def _safe_csv(path):
@@ -5158,7 +5158,7 @@ elif page == "Catalyst Intelligence":
                     all_tickers = sorted(set(primary + transmission))
 
                     with st.container(border=True):
-                        st.markdown(f"### {code.replace('_', ' ').title()} â€” {direction} | {magnitude} Magnitude | {persistence} Persistence")
+                        st.markdown(f"### {code.replace('_', ' ').title()} — {direction} | {magnitude} Magnitude | {persistence} Persistence")
                         st.markdown(f"**What changed:** {headline}")
                         if summary and summary.lower() != "nan":
                             st.write(summary)
@@ -5179,7 +5179,7 @@ elif page == "Catalyst Intelligence":
                             ] if c in confirmation.columns]
                             st.dataframe(confirmation[show_confirmation].head(10), width="stretch", hide_index=True)
 
-                        detail_label = f"Evidence & traceability â€” relevance {relevance} | confidence {confidence_v}"
+                        detail_label = f"Evidence & traceability — relevance {relevance} | confidence {confidence_v}"
                         with st.expander(detail_label):
                             st.write(f"Classification evidence: {event.get('Classification_Evidence', '')}")
                             st.write(f"Relevance gate: {event.get('Gate_Reasons', '')}")
@@ -5193,7 +5193,7 @@ elif page == "Catalyst Intelligence":
                                 st.dataframe(event_signals[trace_cols], width="stretch", hide_index=True)
 
         st.divider()
-        with st.expander("Normalized event audit â€” includes events withheld from Morning Monitor"):
+        with st.expander("Normalized event audit — includes events withheld from Morning Monitor"):
             st.caption(
                 "This is the diagnostic/history layer. An event can be correctly normalized yet intentionally withheld "
                 "from the primary decision-support surface when its financial relevance is too weak."
@@ -5229,7 +5229,7 @@ elif page == "Catalyst Intelligence":
             total = len(catalyst_tests)
             st.success(f"37C precision mapper validation: {passed}/{total} synthetic tests passed.")
 
-        with st.expander("Event â†’ Asset Exposure Map"):
+        with st.expander("Event → Asset Exposure Map"):
             event_options = sorted(catalyst_map["Event_Category_Code"].dropna().astype(str).unique().tolist())
             selected_event = st.selectbox("Event category", event_options, key="catalyst_event_category")
             event_map = catalyst_map[catalyst_map["Event_Category_Code"] == selected_event].copy()
@@ -5263,7 +5263,7 @@ elif page == "Catalyst Intelligence":
                     st.dataframe(live_asset[live_cols], width="stretch", hide_index=True,
                                  column_config={"Source_URL": st.column_config.LinkColumn("Source")})
 
-        with st.expander("Contextual relationships â€” research/audit only"):
+        with st.expander("Contextual relationships — research/audit only"):
             st.caption(
                 "These weaker relationships are intentionally quarantined. They are not surfaced as current "
                 "asset exposure unless later event context establishes a valid transmission path."
@@ -5278,7 +5278,7 @@ elif page == "Catalyst Intelligence":
                 "**Primary** = direct economic exposure.  \n"
                 "**Transmission** = a defined secondary financial pathway.  \n"
                 "**Contextual** = plausible but intentionally quarantined until event-specific evidence supports it.  \n\n"
-                "The intended operating sequence is **Catalyst â†’ Asset Exposure â†’ Technical/Flow Confirmation â†’ Decision Support**. "
+                "The intended operating sequence is **Catalyst → Asset Exposure → Technical/Flow Confirmation → Decision Support**. "
                 "Catalyst evidence does not overwrite lifecycle stage, ML quality, moving-average structure, or rotation evidence."
             )
 
@@ -5289,12 +5289,12 @@ elif page == "Research Evidence":
     st.caption(
         "Validated research findings that explain why Walker Analytics behaves the way it does. "
         "This page summarizes the historical ML, backtesting, stop-management, portfolio, and audit work. "
-        "Research findings are evidence for decision supportâ€”not guarantees of future performance."
+        "Research findings are evidence for decision support—not guarantees of future performance."
     )
 
     st.info(
-        "Core research architecture: Detection â†’ ML Quality â†’ Confirmation â†’ "
-        "Structure â†’ Risk Management â†’ Portfolio Construction. "
+        "Core research architecture: Detection → ML Quality → Confirmation → "
+        "Structure → Risk Management → Portfolio Construction. "
         "The research repeatedly showed that one score or one moving average should not do every job."
     )
 
@@ -5308,8 +5308,8 @@ elif page == "Research Evidence":
         },
         {
             "Decision Question": "When should an early setup be investigated?",
-            "Research Finding": "Days 1â€“4 formed the preferred confirmation window. Day 3 had the strongest Early-Leader rate in the simple day-age comparison, but only by a small margin.",
-            "Walker Implementation": "Days 1â€“4 = evaluate. Day 3 deserves extra attention, not an automatic buy."
+            "Research Finding": "Days 1–4 formed the preferred confirmation window. Day 3 had the strongest Early-Leader rate in the simple day-age comparison, but only by a small margin.",
+            "Walker Implementation": "Days 1–4 = evaluate. Day 3 deserves extra attention, not an automatic buy."
         },
         {
             "Decision Question": "Which early candidates deserve more attention?",
@@ -5384,7 +5384,7 @@ elif page == "Research Evidence":
         {"EMA20 Day": "Day 2", "Early-Leader Rate": 14.1, "Interpretation": "More evidence; still close to the event."},
         {"EMA20 Day": "Day 3", "Early-Leader Rate": 14.7, "Interpretation": "Highest simple day-age rate in the sample."},
         {"EMA20 Day": "Day 4", "Early-Leader Rate": 14.5, "Interpretation": "Still inside preferred confirmation window."},
-        {"EMA20 Day": "Day 5", "Early-Leader Rate": 14.5, "Interpretation": "Late early window; research portfolios used Days 1â€“4."},
+        {"EMA20 Day": "Day 5", "Early-Leader Rate": 14.5, "Interpretation": "Late early window; research portfolios used Days 1–4."},
     ])
 
     st.dataframe(
@@ -5402,7 +5402,7 @@ elif page == "Research Evidence":
     )
 
     st.success(
-        "Operational takeaway: Day 0 says LOOK. Days 1â€“4 say EVALUATE. "
+        "Operational takeaway: Day 0 says LOOK. Days 1–4 say EVALUATE. "
         "Day 3 deserves extra attention from the historical sample, but the evidence does not justify a Day-3 automatic-buy rule."
     )
 
@@ -5477,12 +5477,12 @@ elif page == "Research Evidence":
         {
             "Finding": "Progressive-confirm tightening",
             "Evidence": "Tightening simply because confirmation improved was often too aggressive.",
-            "Implication": "Retire the idea of automatically stepping 200â†’100â†’50â†’30 based only on confirmation."
+            "Implication": "Retire the idea of automatically stepping 200→100→50→30 based only on confirmation."
         },
         {
             "Finding": "Earned progressive protection",
             "Evidence": "Milestone-based tightening improved several portfolio configurations.",
-            "Implication": "Current framework: +5% peakâ†’MA100, +10%â†’MA50, +20%â†’MA30."
+            "Implication": "Current framework: +5% peak→MA100, +10%→MA50, +20%→MA30."
         },
         {
             "Finding": "Dynamic MA semantics",
@@ -5664,7 +5664,7 @@ elif page == "Research Evidence":
         - Several parameters were deliberately **not optimized** to avoid turning the research into curve fitting.
         - The walk-forward model provides ranking lift, not certainty.
         - Extraordinary market regimes can behave differently from ordinary conditions.
-        - Portfolio-level results depend on diversification, replacement rules, position sizing, and stop architectureâ€”not only entry quality.
+        - Portfolio-level results depend on diversification, replacement rules, position sizing, and stop architecture—not only entry quality.
         """
     )
 
@@ -5719,7 +5719,7 @@ elif page == "Methodology":
         Combines Momentum, Acceleration, and Trend into a confirmation-stage decision-support score.
         It is intentionally not treated as the earliest possible entry signal.
 
-        **Early Rotation Signal â€” planned next layer**
+        **Early Rotation Signal — planned next layer**
 
         Uses the faster EMA20 / MA30 relationship, price expansion from EMA20, and improving momentum
         to identify assets earlier in a possible rotation before full confirmation is present.
@@ -5734,27 +5734,27 @@ elif page == "Methodology":
         """
         **Market Data**
 
-        â†“
+        ↓
 
         **Python Price / Return / MA Pipeline**
 
-        â†“
+        ↓
 
         **Web Asset Snapshot**
 
-        â†“
+        ↓
 
         **Early Rotation Engine**
 
-        â†“
+        ↓
 
         **Confirmed Rotation Analytics Engine**
 
-        â†“
+        ↓
 
         **Streamlit Application**
 
-        â†“
+        ↓
 
         **Walker Analytics**
         """
