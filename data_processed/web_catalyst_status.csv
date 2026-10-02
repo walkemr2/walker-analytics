@@ -1,2 +1,2 @@
 Refreshed_At,Status,Message,Raw_Articles,Normalized_Events,Asset_Signals,Provider,Lookback_Hours
-2026-10-01T02:25:08.081455+00:00,OK,Live catalyst refresh completed. Morning Monitor: 0 events / 0 mapped signals.,50,0,0,Alpha Vantage NEWS_SENTIMENT,36
+2026-10-02T02:57:53.918488+00:00,OK,Live catalyst refresh completed. Morning Monitor: 0 events / 0 mapped signals.,50,0,0,Alpha Vantage NEWS_SENTIMENT,36
