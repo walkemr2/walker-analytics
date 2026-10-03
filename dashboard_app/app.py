@@ -1132,140 +1132,7 @@ elif page == "Market Map":
     # HIERARCHY NAVIGATION
     # --------------------------------------------------------
 
-    # --------------------------------------------------------
-    # MARKET STRUCTURE OVERVIEW
-    # --------------------------------------------------------
-
-    st.subheader("2. Market Structure Overview")
-
-    st.caption(
-        "Start here before drilling into individual assets. "
-        "This view shows where strength, emerging rotation, new detection, "
-        "and structural caution are concentrated across the market."
-    )
-
-    sector_overview = hierarchy_levels[
-        hierarchy_levels["Hierarchy_Level"] == "Sector"
-    ].copy()
-
-    if not sector_overview.empty:
-
-        pct_cols = [
-            "Pct_Leader_or_Emerging",
-            "Pct_Early_Entry_or_Building",
-            "Pct_New_Detection",
-            "Pct_Structural_Caution",
-        ]
-
-        for col in pct_cols:
-            if col in sector_overview.columns:
-                sector_overview[col] = sector_overview[col] * 100
-
-        strongest = sector_overview.sort_values(
-            ["Mean_Momentum_Score", "Mean_Acceleration_Score"],
-            ascending=False,
-            na_position="last"
-        ).head(5)
-
-        emerging = sector_overview.sort_values(
-            ["Pct_Early_Entry_or_Building", "Mean_Acceleration_Score"],
-            ascending=False,
-            na_position="last"
-        ).head(5)
-
-        caution = sector_overview.sort_values(
-            ["Pct_Structural_Caution", "Mean_Trend_Score"],
-            ascending=[False, True],
-            na_position="last"
-        ).head(5)
-
-        m1, m2, m3 = st.columns(3)
-
-        with m1:
-            st.markdown("#### ▲ Strongest Areas")
-            for _, r in strongest.iterrows():
-                st.write(
-                    f"**{r['Group_Name']}** — "
-                    f"Momentum {r.get('Mean_Momentum_Score', 0):.0f} | "
-                    f"Acceleration {r.get('Mean_Acceleration_Score', 0):.0f}"
-                )
-
-        with m2:
-            st.markdown("#### △ Emerging / Building")
-            for _, r in emerging.iterrows():
-                st.write(
-                    f"**{r['Group_Name']}** — "
-                    f"{r.get('Pct_Early_Entry_or_Building', 0):.0f}% Early/Building | "
-                    f"Acceleration {r.get('Mean_Acceleration_Score', 0):.0f}"
-                )
-
-        with m3:
-            st.markdown("#### ▼ Structural Caution")
-            for _, r in caution.iterrows():
-                st.write(
-                    f"**{r['Group_Name']}** — "
-                    f"{r.get('Pct_Structural_Caution', 0):.0f}% Caution | "
-                    f"Trend {r.get('Mean_Trend_Score', 0):.0f}"
-                )
-
-        st.markdown("#### Sector Rotation Map")
-
-        overview_cols = [
-            c for c in [
-                "Group_Name",
-                "Hierarchy_Read",
-                "Asset_Count",
-                "Pct_Leader_or_Emerging",
-                "Pct_Early_Entry_or_Building",
-                "Pct_New_Detection",
-                "Pct_Structural_Caution",
-                "Mean_Momentum_Score",
-                "Mean_Acceleration_Score",
-                "Mean_Trend_Score",
-            ]
-            if c in sector_overview.columns
-        ]
-
-        overview_table = sector_overview[overview_cols].copy()
-
-        overview_table = overview_table.sort_values(
-            ["Mean_Momentum_Score", "Mean_Acceleration_Score"],
-            ascending=False,
-            na_position="last"
-        )
-
-        st.dataframe(
-            overview_table,
-            width="stretch",
-            hide_index=True,
-            height=min(700, 90 + 34 * max(len(overview_table), 1)),
-            column_config={
-                "Group_Name": st.column_config.TextColumn("Sector / Major Group", width="medium"),
-                "Hierarchy_Read": st.column_config.TextColumn("Market Read", width="large"),
-                "Asset_Count": st.column_config.NumberColumn("Assets", format="%d"),
-                "Pct_Leader_or_Emerging": st.column_config.NumberColumn("Leader / Emerging", format="%.0f%%"),
-                "Pct_Early_Entry_or_Building": st.column_config.NumberColumn("Early / Building", format="%.0f%%"),
-                "Pct_New_Detection": st.column_config.NumberColumn("New Detection", format="%.0f%%"),
-                "Pct_Structural_Caution": st.column_config.NumberColumn("Structural Caution", format="%.0f%%"),
-                "Mean_Momentum_Score": st.column_config.NumberColumn("Momentum", format="%.0f"),
-                "Mean_Acceleration_Score": st.column_config.NumberColumn("Acceleration", format="%.0f"),
-                "Mean_Trend_Score": st.column_config.NumberColumn("Trend", format="%.0f"),
-            }
-        )
-
-        st.info(
-            "Use this as a market-level screening layer, not as an entry signal. "
-            "Broad strength identifies where capital is already working; "
-            "Early / Building and New Detection identify areas worth investigating; "
-            "Structural Caution identifies areas where broader confirmation is weak."
-        )
-
-    else:
-        st.info("No sector-level hierarchy summary is currently available.")
-
-    st.divider()
-
-    st.subheader("3. Navigate the Market Hierarchy")
+    st.subheader("2. Navigate the Market Hierarchy")
 
     f1, f2, f3, f4 = st.columns(4)
 
@@ -5069,7 +4936,85 @@ The **MA tier ratchets tighter**, but the actual dollar reference remains the **
     st.success("Operating principle: detect early, compare appropriately, confirm broadly, manage risk separately, and use the research evidence to understand why each layer exists.")
 
     st.divider()
-    st.subheader("10. Current Research Frontier")
+    st.subheader("10. Operating Manual — From Morning Review to Position Management")
+    st.caption(
+        "Use this sequence as the practical operating routine. The dashboard supplies evidence and context; "
+        "the final trade decision remains separate from any single score, signal, or page."
+    )
+
+    operating_manual = pd.DataFrame([
+        {
+            "Phase": "Morning Review",
+            "Primary Pages": "Command Center → Market Map",
+            "Objective": "Establish market context before looking for individual trades.",
+            "What to Review": "Morning Read, leadership, emerging rotation, risk watch, technology complex, peer groups, and vertical hierarchy.",
+            "Decision Question": "Where is capital already moving, where might it be starting to move, and is the move broad or isolated?"
+        },
+        {
+            "Phase": "Candidate Investigation",
+            "Primary Pages": "Decision Path → Rotation Decision Support → Catalyst Intelligence",
+            "Objective": "Investigate assets surfaced by the system rather than treating a ranking as an instruction.",
+            "What to Review": "Day 0–4 timing, ML quality, early-rotation evidence, catalyst exposure/evidence, confirmation, and hierarchy support.",
+            "Decision Question": "Is this a credible developing opportunity with multiple independent layers of support?"
+        },
+        {
+            "Phase": "Before Entry",
+            "Primary Pages": "MA / EMA Radar → Wide Beach → Asset Explorer",
+            "Objective": "Verify technical structure and understand exactly where price sits relative to the moving-average framework.",
+            "What to Review": "EMA20 event date, EMA20 slope, MA30/50/100/200 relationships, recent crosses, price extension, lifecycle stage, and ticker-level evidence.",
+            "Decision Question": "Is the setup technically coherent, reasonably timed, and supported beyond the initial signal?"
+        },
+        {
+            "Phase": "Position Management",
+            "Primary Pages": "Wide Beach → MA / EMA Radar → Rotation Analysis",
+            "Objective": "Manage an existing position separately from the search for new opportunities.",
+            "What to Review": "Relevant structural MA, trend persistence, leadership state, acceleration, weakening evidence, and distance from important averages.",
+            "Decision Question": "Is the original trend still intact, or is deterioration becoming meaningful enough to reassess risk?"
+        },
+        {
+            "Phase": "Exit / Review",
+            "Primary Pages": "MA / EMA Radar → Rotation Analysis → Research Evidence",
+            "Objective": "Separate normal volatility from a genuine change in structure and document what happened.",
+            "What to Review": "MA breaks, loss of leadership, weakening acceleration, lifecycle deterioration, failed confirmation, and the research basis for the rule being used.",
+            "Decision Question": "Has the evidence supporting the position materially changed, and what should be learned from the completed trade?"
+        },
+    ])
+    st.dataframe(operating_manual, width="stretch", hide_index=True, height=355)
+
+    st.markdown("#### Position-management principle")
+    st.info(
+        "New-opportunity ranking and position management answer different questions. "
+        "An asset can stop being a top new entry candidate while an existing position remains technically healthy. "
+        "Use the moving-average structure, lifecycle, leadership, and deterioration evidence to manage an open position."
+    )
+
+    st.divider()
+    st.subheader("11. Quick Reference — Where Do I Find It?")
+
+    quick_reference = pd.DataFrame([
+        {"Question": "What matters in the market this morning?", "Go To": "Command Center", "Look For": "Morning Read, opportunity pipeline, leadership, technology complex, and risk watch."},
+        {"Question": "Where does an asset fit in the market structure?", "Go To": "Market Map", "Look For": "Asset Class → Sector → Peer Group → Instrument plus peer-relative and vertical-hierarchy context."},
+        {"Question": "What should I investigate next?", "Go To": "Decision Path", "Look For": "The ordered path from market context through candidate evidence and technical confirmation."},
+        {"Question": "Is a fresh early signal worth investigating?", "Go To": "Rotation Decision Support", "Look For": "Day 0–4 timing, ML quality, confirmation, MA structure, and early-rotation state."},
+        {"Question": "Did EMA20 just cross, and what is the MA structure?", "Go To": "MA / EMA Radar", "Look For": "EMA20 event timing, slope, distance from averages, broader MA alignment, and cross history."},
+        {"Question": "How did price and the MAs get here?", "Go To": "Wide Beach", "Look For": "Historical price/MA relationships and the current lifecycle stage."},
+        {"Question": "Where might capital be starting to move?", "Go To": "Early Rotation", "Look For": "Faster EMA20/MA30 evidence, acceleration, and developing rotation."},
+        {"Question": "Where is leadership established or weakening?", "Go To": "Rotation Analysis", "Look For": "Momentum, acceleration, trend, readiness, leadership, emerging rotation, and leadership risk."},
+        {"Question": "What does the full picture look like for one ticker?", "Go To": "Asset Explorer", "Look For": "Ticker-level technical, rotation, hierarchy, and supporting evidence in one place."},
+        {"Question": "What current news catalyst may matter to an asset?", "Go To": "Catalyst Intelligence", "Look For": "Normalized catalyst events, mapped asset exposure, current evidence, and traceability."},
+        {"Question": "Why does the system use these rules?", "Go To": "Research Evidence", "Look For": "Validated findings, backtests, limitations, and evidence supporting the framework."},
+        {"Question": "How is the system constructed conceptually?", "Go To": "Methodology", "Look For": "Definitions, architecture, scoring concepts, and analytical design."},
+    ])
+    st.dataframe(quick_reference, width="stretch", hide_index=True, height=455)
+
+    st.success(
+        "Fast operating rule: Command Center for context → Market Map for structure → Decision Support for investigation → "
+        "MA / EMA Radar and Wide Beach for technical confirmation → Rotation Analysis for leadership → "
+        "Asset Explorer for final ticker review."
+    )
+
+    st.divider()
+    st.subheader("12. Current Research Frontier")
     st.markdown("""
 The hierarchy and peer-intelligence layers are currently **descriptive decision support**. The next research phase is to reconstruct these features historically and test whether:
 
