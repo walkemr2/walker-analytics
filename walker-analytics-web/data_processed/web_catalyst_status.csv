@@ -1,2 +1,2 @@
 Refreshed_At,Status,Message,Raw_Articles,Normalized_Events,Asset_Signals,Provider,Lookback_Hours
-2026-10-08T14:45:11.280114+00:00,ERROR,Alpha Vantage NEWS_SENTIMENT did not return a feed: Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium endpoints,0,0,0,Alpha Vantage NEWS_SENTIMENT,36
+2026-10-09T00:23:38.231876+00:00,ERROR,Alpha Vantage NEWS_SENTIMENT did not return a feed: Thank you for using Alpha Vantage! This is a premium endpoint. You may subscribe to any of the premium plans at https://www.alphavantage.co/premium/ to instantly unlock all premium endpoints,0,0,0,Alpha Vantage NEWS_SENTIMENT,36
