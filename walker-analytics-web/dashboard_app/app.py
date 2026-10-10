@@ -96,6 +96,7 @@ page = st.sidebar.radio(
         "Early Rotation",
         "Rotation Analysis",
         "Catalyst Intelligence",
+        "Catalyst Research Monitor",
         "User Guide",
         "Research Evidence",
         "Methodology"
@@ -5116,7 +5117,16 @@ elif page == "Catalyst Intelligence":
                 "The intended operating sequence is **Catalyst → Asset Exposure → Technical/Flow Confirmation → Decision Support**. "
                 "Catalyst evidence does not overwrite lifecycle stage, ML quality, moving-average structure, or rotation evidence."
             )
+elif page == "Catalyst Research Monitor":
 
+    # Research-only historical snapshot.
+    # No changes to production Catalyst or trading decisions.
+    from catalyst_research_monitor import render_shadow_monitor
+
+    render_shadow_monitor(
+        BASE_DIR.parent / "config" / "catalyst" / "research_37D_v3"
+        / "catalyst_research_event_register.csv"
+    )
 elif page == "Research Evidence":
 
     st.header("Research Evidence & Findings")
